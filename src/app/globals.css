@@ -1,0 +1,135 @@
+@import "tailwindcss";
+
+:root {
+  /* Design Tokens - 우리아이도서관 */
+  --color-primary: #2E7D32;
+  --color-primary-light: #4CAF50;
+  --color-primary-dark: #1B5E20;
+  
+  --color-secondary: #FFD54F;
+  --color-secondary-light: #FFECB3;
+  
+  --color-accent: #FF7043;
+  
+  --color-background: #FFFEF5;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F5F5F0;
+  
+  --color-text: #3E2723;
+  --color-text-secondary: #5D4037;
+  --color-text-muted: #8D6E63;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-geist-sans), "Pretendard", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Utilities */
+.gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+}
+
+.gradient-warm {
+  background: linear-gradient(135deg, var(--color-secondary-light) 0%, var(--color-secondary) 100%);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Age Selection Buttons */
+.age-button {
+  position: relative;
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 2px solid transparent;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.age-button:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.age-button.selected {
+  border-color: var(--color-primary);
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.08) 0%, rgba(76, 175, 80, 0.08) 100%);
+}
+
+/* Card Styles */
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Acquisition Badge */
+.acquisition-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.acquisition-badge.library {
+  background: rgba(46, 125, 50, 0.1);
+  color: var(--color-primary);
+}
+
+.acquisition-badge.daangn {
+  background: rgba(255, 107, 0, 0.1);
+  color: #FF6B00;
+}
+
+.acquisition-badge.aladin {
+  background: rgba(103, 58, 183, 0.1);
+  color: #673AB7;
+}
+
+.acquisition-badge.new {
+  background: rgba(255, 193, 7, 0.2);
+  color: #F57C00;
+}
+/* Scrollbar Hide Utility - Cross Browser */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+    width: 0;
+    height: 0;
+    background: transparent; /* Optional: just in case */
+}
