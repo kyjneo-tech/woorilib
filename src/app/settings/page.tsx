@@ -98,6 +98,15 @@ export default function SettingsPage() {
               <span>→</span>
             </span>
           </button>
+          
+          <Link
+            href="/settings/family"
+            className="w-full flex items-center justify-between py-3 px-4 rounded-xl"
+            style={{ background: 'var(--color-surface-secondary)' }}
+          >
+            <span style={{ color: 'var(--color-text)' }}>👨‍👩‍👧‍👦 가족 구성원 관리</span>
+            <span className="text-gray-400">→</span>
+          </Link>
         </section>
 
         {/* Region Settings */}

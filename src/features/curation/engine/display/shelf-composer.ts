@@ -54,8 +54,12 @@ export class ShelfComposer {
     const allItems: BookItem[] = [];
 
     // Compose Shelves for each Core Category
+    console.log(`[ShelfComposer] Composing for Age: ${months}m -> Stage: ${stage.label}`, { core: stage.coreCategories });
+
     for (const category of stage.coreCategories) {
+      console.log(`[ShelfComposer] Building Shelf: ${category}`);
       const shelf = await this.buildShelf(category, months);
+      console.log(`[ShelfComposer] Shelf ${category} items: ${shelf.items.length}`);
       if (shelf.items.length > 0) {
         shelves.push(shelf);
         // Collect all items for Spotlight selection
@@ -95,11 +99,16 @@ export class ShelfComposer {
     
     // 1. Fetch Collections (Main Dish) - Logic: Match Category
     // Ideally we filter by target_age too, but for now we trust the Category + Loose Age Filter
-    const { data: collections } = await supabase
+    const { data: collections, error } = await supabase
       .from('collections')
       .select('id, title, publisher, summary, features, sales_index, blog_review_count')
       .eq('category', category)
       .limit(10); // Fetch more to allow ranking to work better (was 5)
+
+    if (error) {
+        console.error(`[ShelfComposer] DB Error for ${category}:`, error);
+    }
+    console.log(`[ShelfComposer] Fetched ${collections?.length || 0} items for ${category}`);
 
     if (!collections || collections.length === 0) {
       return { id: category, title: category, description: '', category, items: [] };

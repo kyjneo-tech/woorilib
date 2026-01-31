@@ -9,6 +9,7 @@ import { AGE_GROUPS } from '@/shared/config/constants';
 
 import { CurationDashboard } from '@/features/curation/ui/CurationDashboard';
 import { RegionSelector } from '@/features/region-selector/ui/region-selector';
+import { BottomNav } from '@/shared/ui/BottomNav';
 
 export default function HomePage() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function HomePage() {
             <span className="font-bold" style={{ color: 'var(--color-primary)' }}>우리아이도서관</span>
           </Link>
           <div className="flex items-center gap-2">
+            <RegionSelector variant="compact" />
             {currentAgeGroup && (
               <button 
                 onClick={() => setShowAgeModal(true)}
@@ -72,10 +74,7 @@ export default function HomePage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
-        {/* Region Selector Panel */}
-        <section className="mb-6">
-          <RegionSelector />
-        </section>
+
 
         {/* Search Section */}
         <section className="mb-8">
@@ -145,30 +144,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Bottom Navigation */}
-      <nav 
-        className="fixed bottom-0 left-0 right-0 px-4 py-3 border-t"
-        style={{ background: 'var(--color-surface)', borderColor: 'var(--color-surface-secondary)' }}
-      >
-        <div className="max-w-2xl mx-auto flex justify-around">
-          <Link href="/home" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🏠</span>
-            <span className="text-xs font-medium" style={{ color: 'var(--color-primary)' }}>홈</span>
-          </Link>
-          <Link href="/search" className="flex flex-col items-center gap-1">
-            <span className="text-xl">🔍</span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>검색</span>
-          </Link>
-          <Link href="/my-bookshelf" className="flex flex-col items-center gap-1">
-            <span className="text-xl">📚</span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>책장</span>
-          </Link>
-          <Link href="/settings" className="flex flex-col items-center gap-1">
-            <span className="text-xl">⚙️</span>
-            <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>설정</span>
-          </Link>
-        </div>
-      </nav>
+      <BottomNav />
     </div>
   );
 }

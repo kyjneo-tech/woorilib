@@ -12,6 +12,8 @@ export const BookSchema = z.object({
   vol: z.string().optional(),
   loanCnt: z.number().optional(),
   ranking: z.number().optional(),
+  isVerified: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 export type Book = z.infer<typeof BookSchema>;

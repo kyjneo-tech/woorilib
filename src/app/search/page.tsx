@@ -30,7 +30,11 @@ function SearchContent() {
     try {
       const ageParam = age !== undefined ? `&age=${age}` : '';
       const response = await fetch(`/api/search/unified?q=${encodeURIComponent(query.trim())}${ageParam}`);
-      if (!response.ok) throw new Error('Search failed');
+      if (!response.ok) {
+        const errData = await response.json();
+        console.error('Search API Error:', errData);
+        throw new Error(errData.details || errData.error || 'Search failed');
+      }
       
       const data = await response.json();
       setBooks(data.books || []);

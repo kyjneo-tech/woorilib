@@ -25,11 +25,11 @@ BEGIN
     r.book_cover,
     COUNT(*) AS read_count
   FROM reading_records r
-  JOIN children c ON r.child_id = c.id
+  JOIN child_profiles c ON r.child_id::uuid = c.id
   WHERE
-    -- 나이 계산: 현재 날짜 기준
-    EXTRACT(YEAR FROM AGE(c.birth_date)) >= min_age
-    AND EXTRACT(YEAR FROM AGE(c.birth_date)) <= max_age
+    -- 나이 계산: 현재 연도 - 태어난 연도
+    (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) >= min_age
+    AND (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) <= max_age
   GROUP BY r.isbn, r.book_title, r.book_author, r.book_cover
   ORDER BY read_count DESC
   LIMIT result_limit;

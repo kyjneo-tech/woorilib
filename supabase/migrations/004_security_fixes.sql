@@ -52,10 +52,11 @@ BEGIN
     r.book_cover,
     COUNT(*) AS read_count
   FROM reading_records r
-  JOIN children c ON r.child_id = c.id
+  JOIN child_profiles c ON r.child_id::uuid = c.id
   WHERE
-    EXTRACT(YEAR FROM AGE(c.birth_date)) >= min_age
-    AND EXTRACT(YEAR FROM AGE(c.birth_date)) <= max_age
+    -- 나이 계산: 현재 연도 - 태어난 연도
+    (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) >= min_age
+    AND (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) <= max_age
   GROUP BY r.isbn, r.book_title, r.book_author, r.book_cover
   ORDER BY read_count DESC
   LIMIT result_limit;
@@ -92,12 +93,12 @@ BEGIN
   -- 내 자녀의 총 독서량
   SELECT COUNT(*) INTO v_my_total
   FROM reading_records
-  WHERE child_id = p_child_id;
+  WHERE child_id::uuid = p_child_id;
 
   -- 내 자녀의 이번 달 독서량
   SELECT COUNT(*) INTO v_my_month
   FROM reading_records
-  WHERE child_id = p_child_id
+  WHERE child_id::uuid = p_child_id
     AND EXTRACT(YEAR FROM read_date) = EXTRACT(YEAR FROM CURRENT_DATE)
     AND EXTRACT(MONTH FROM read_date) = EXTRACT(MONTH FROM CURRENT_DATE);
 
@@ -109,11 +110,11 @@ BEGIN
   FROM (
     SELECT r.child_id, COUNT(*) AS cnt
     FROM reading_records r
-    JOIN children c ON r.child_id = c.id
+    JOIN child_profiles c ON r.child_id::uuid = c.id
     WHERE
-      EXTRACT(YEAR FROM AGE(c.birth_date)) >= p_min_age
-      AND EXTRACT(YEAR FROM AGE(c.birth_date)) <= p_max_age
-      AND r.child_id != p_child_id
+      (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) >= p_min_age
+      AND (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) <= p_max_age
+      AND r.child_id::uuid != p_child_id
     GROUP BY r.child_id
   ) sub;
 
@@ -122,11 +123,11 @@ BEGIN
   FROM (
     SELECT r.child_id, COUNT(*) AS cnt
     FROM reading_records r
-    JOIN children c ON r.child_id = c.id
+    JOIN child_profiles c ON r.child_id::uuid = c.id
     WHERE
-      EXTRACT(YEAR FROM AGE(c.birth_date)) >= p_min_age
-      AND EXTRACT(YEAR FROM AGE(c.birth_date)) <= p_max_age
-      AND r.child_id != p_child_id
+      (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) >= p_min_age
+      AND (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) <= p_max_age
+      AND r.child_id::uuid != p_child_id
       AND EXTRACT(YEAR FROM r.read_date) = EXTRACT(YEAR FROM CURRENT_DATE)
       AND EXTRACT(MONTH FROM r.read_date) = EXTRACT(MONTH FROM CURRENT_DATE)
     GROUP BY r.child_id
@@ -137,10 +138,10 @@ BEGIN
   FROM (
     SELECT r.child_id, COUNT(*) AS cnt
     FROM reading_records r
-    JOIN children c ON r.child_id = c.id
+    JOIN child_profiles c ON r.child_id::uuid = c.id
     WHERE
-      EXTRACT(YEAR FROM AGE(c.birth_date)) >= p_min_age
-      AND EXTRACT(YEAR FROM AGE(c.birth_date)) <= p_max_age
+      (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) >= p_min_age
+      AND (EXTRACT(YEAR FROM CURRENT_DATE) - c.birth_year) <= p_max_age
     GROUP BY r.child_id
     HAVING COUNT(*) > v_my_total
   ) sub;

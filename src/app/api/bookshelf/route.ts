@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { isbn, title, author, bookImage, status = 'want_to_read' } = body;
+    const { isbn, title, author, bookImage, status = 'want_to_read', domain } = body;
 
     if (!isbn || !title) {
       return NextResponse.json({ error: 'isbn and title are required' }, { status: 400 });
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
       },
       update: {
         status,
+        domain: domain || undefined,
         finishedAt: status === 'finished' ? new Date() : null,
       },
       create: {
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
         author,
         bookImage,
         status,
+        domain,
         finishedAt: status === 'finished' ? new Date() : null,
       },
     });

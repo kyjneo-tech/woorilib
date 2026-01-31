@@ -8,11 +8,17 @@ import { useRegionStore } from '@/features/region-selector/lib/use-region-store'
 import { BookLocationMap } from '@/features/map/ui/BookLocationMap';
 import { libraryToMapLocation, useMapStore } from '@/features/map/lib/use-map-store';
 
+import { useAuth } from '@/shared/lib/hooks/use-auth';
+
+import { useFamily } from '@/shared/lib/hooks/use-family';
+
+// ... (previous imports)
 interface Props {
   book: BookItem;
   onClose: () => void;
   source?: 'library' | 'general';
 }
+
 
 interface ReviewItem {
   title: string;
@@ -22,6 +28,11 @@ interface ReviewItem {
 }
 
 export function BookDetailModal({ book, onClose, source = 'general' }: Props) {
+  const { isAuthenticated } = useAuth();
+  const { children } = useFamily();
+  const [showChildSelect, setShowChildSelect] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
   const [meta, setMeta] = useState<{ cover?: string, price?: number, link?: string, isbn?: string } | null>(null);
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
@@ -146,6 +157,61 @@ export function BookDetailModal({ book, onClose, source = 'general' }: Props) {
     return map[tag] || { label: tag, color: 'bg-gray-100 text-gray-500', icon: '#' };
   };
 
+  // 4. Reading Record Handler
+  const handleReadItClick = () => {
+    if (!isAuthenticated) {
+        alert('로그인이 필요합니다.');
+        return;
+    }
+    
+    if (children.length > 1) {
+        setShowChildSelect(true);
+    } else {
+        handleReadItConfirm(null);
+    }
+  };
+
+  const handleReadItConfirm = async (childId: string | null) => {
+    // 1. Optimistic Feedback
+    if (!confirm(`'${book.title}'을(를) 읽은 책으로 기록할까요?`)) return;
+    
+    setIsRecording(true);
+    try {
+        const res = await fetch('/api/records', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                isbn: meta?.isbn || book.id || 'unknown',
+                title: book.title,
+                author: book.publisher || '', 
+                cover: coverUrl,
+                childId: childId 
+            })
+        });
+
+        if (res.ok) {
+            alert('✅ 기록되었습니다!');
+            setShowChildSelect(false);
+        } else {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const err = await res.json();
+                console.error('[ReadIt Error JSON]', err);
+                alert(`오류가 발생했습니다: ${err.error || '알 수 없는 오류'}\n내용: ${err.details || JSON.stringify(err)}`);
+            } else {
+                const text = await res.text();
+                console.error('[ReadIt Error Text]', text);
+                alert(`서버 오류 (${res.status}): ${text.substring(0, 100)}`);
+            }
+        }
+    } catch (e) {
+        console.error('[ReadIt Network Error]', e);
+        alert(`네트워크 오류가 발생했습니다: ${e}`);
+    } finally {
+        setIsRecording(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
       <div 
@@ -189,21 +255,27 @@ export function BookDetailModal({ book, onClose, source = 'general' }: Props) {
             </div>
 
             {/* Service Loop Buttons (Modern Minimal Style) */}
-            <div className="grid grid-cols-3 gap-3 mb-8">
+            <div className="grid grid-cols-4 gap-3 mb-8">
+                <button 
+                   onClick={handleReadItClick}
+                   className="p-3 rounded-xl flex flex-col items-center justify-center gap-1 border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-all text-purple-700 active:scale-95 duration-100">
+                   <span className="text-xl">✅</span> 
+                   <span className="text-xs font-bold">읽었어요</span>
+                </button>
                 <a href={naverLink} target="_blank" rel="noopener noreferrer" 
                    className="p-3 rounded-xl flex flex-col items-center justify-center gap-1 border border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all text-gray-600 hover:text-green-700">
                    <span className="text-lg font-bold text-green-500">N</span> 
-                   <span className="text-xs font-bold">최저가 검색</span>
+                   <span className="text-xs font-bold">최저가</span>
                 </a>
                 <a href={aladinUsedLink} target="_blank" rel="noopener noreferrer"
                     className="p-3 rounded-xl flex flex-col items-center justify-center gap-1 border border-gray-200 hover:border-pink-500 hover:bg-pink-50 transition-all text-gray-600 hover:text-pink-700">
                     <span className="text-xl">🧞‍♂️</span> 
-                    <span className="text-xs font-bold">중고 재고</span>
+                    <span className="text-xs font-bold">중고재고</span>
                 </a>
                 <a href={danggeunLink} target="_blank" rel="noopener noreferrer"
                     className="p-3 rounded-xl flex flex-col items-center justify-center gap-1 border border-orange-200 bg-orange-50 hover:bg-orange-100 transition-all text-orange-700">
                     <span className="text-lg">🥕</span> 
-                    <span className="text-xs font-bold">당근마켓</span>
+                    <span className="text-xs font-bold">당근</span>
                 </a>
             </div>
 
@@ -351,6 +423,31 @@ export function BookDetailModal({ book, onClose, source = 'general' }: Props) {
             >
                 닫기
             </button>
+
+      {/* Child Selection Overlay */}
+      {showChildSelect && (
+        <div className="absolute inset-0 bg-white z-50 rounded-3xl flex flex-col animate-in slide-in-from-bottom-5">
+            <div className="p-6 border-b flex items-center justify-between bg-purple-50/50">
+                <h3 className="font-bold text-lg text-purple-900">누가 읽었나요?</h3>
+                <button onClick={() => setShowChildSelect(false)} className="bg-white px-3 py-1.5 rounded-full text-sm font-bold shadow-sm text-gray-400 hover:text-gray-600">닫기</button>
+            </div>
+            <div className="p-6 flex-1 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3">
+                    {children.map(child => (
+                        <button
+                            key={child.id}
+                            onClick={() => handleReadItConfirm(child.id)}
+                            disabled={isRecording}
+                            className="bg-white border-2 border-gray-100 hover:border-purple-500 hover:bg-purple-50 rounded-2xl p-6 flex flex-col items-center gap-3 transition-all active:scale-95 shadow-sm"
+                        >
+                             <div className="text-5xl bg-gray-50 p-4 rounded-full mb-2">{child.emoji}</div>
+                            <span className="font-bold text-gray-800 text-lg">{child.name}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+      )}
         </div>
       </div>
     </div>

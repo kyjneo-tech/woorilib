@@ -9,9 +9,10 @@ import { RegionData, SubRegion, District } from '@/shared/config/region-codes';
 
 interface RegionSelectorProps {
   className?: string;
+  variant?: 'default' | 'compact';
 }
 
-export function RegionSelector({ className }: RegionSelectorProps) {
+export function RegionSelector({ className, variant = 'default' }: RegionSelectorProps) {
   const { setRegion: setGlobalRegion } = useUserStore();
   const {
     selectedRegion,
@@ -93,19 +94,31 @@ export function RegionSelector({ className }: RegionSelectorProps) {
 
   return (
     <div className={cn('relative', className)}>
-      <button
-        type="button"
-        onClick={handleOpen}
-        className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-purple-50 rounded-[1.5rem] hover:bg-purple-50/30 transition-all shadow-sm w-full group"
-      >
-        <MapPin className="w-5 h-5 text-purple-500 group-hover:scale-110 transition-transform" />
-        <span className="flex-1 text-left font-bold text-gray-800 truncate">
-          {mounted ? getDisplayName() : '지역을 선택하세요'}
-        </span>
-        <ChevronDown
-          className={cn('w-4 h-4 text-gray-400 transition-transform', isOpen && 'rotate-180')}
-        />
-      </button>
+      {variant === 'default' ? (
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-purple-50 rounded-[1.5rem] hover:bg-purple-50/30 transition-all shadow-sm w-full group"
+        >
+          <MapPin className="w-5 h-5 text-purple-500 group-hover:scale-110 transition-transform" />
+          <span className="flex-1 text-left font-bold text-gray-800 truncate">
+            {mounted ? getDisplayName() : '지역을 선택하세요'}
+          </span>
+          <ChevronDown
+            className={cn('w-4 h-4 text-gray-400 transition-transform', isOpen && 'rotate-180')}
+          />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={handleOpen}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold transition-all active:scale-95"
+          style={{ background: 'var(--color-surface-secondary)', color: 'var(--color-text)' }}
+        >
+          <span>📍 {mounted ? getDisplayName() : '지역선택'}</span>
+          <ChevronDown className={cn('w-3 h-3 transition-transform', isOpen && 'rotate-180')} />
+        </button>
+      )}
 
       {isOpen && (
         <>
@@ -113,7 +126,7 @@ export function RegionSelector({ className }: RegionSelectorProps) {
             className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 animate-in fade-in"
             onClick={handleClose}
           />
-          <div className="absolute left-0 right-0 top-full mt-3 bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl z-50 max-h-[70vh] overflow-hidden animate-in slide-in-from-top-4 duration-300">
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-3 w-[340px] max-w-[90vw] bg-white border border-gray-100 rounded-[2.5rem] shadow-2xl z-50 max-h-[70vh] overflow-hidden animate-in slide-in-from-top-4 duration-300">
             {/* 헤더 */}
             <div className="sticky top-0 bg-white border-b border-gray-50 px-6 py-5 flex items-center gap-3">
               {step !== 'region' && (

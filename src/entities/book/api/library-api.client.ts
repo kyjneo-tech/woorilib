@@ -158,6 +158,8 @@ export class LibraryApiClient {
   // Popular books by age/region
   async getPopularBooks(params: {
     age?: string;
+    from_age?: number;
+    to_age?: number;
     region?: string;
     dtl_region?: string;
     pageSize?: number;

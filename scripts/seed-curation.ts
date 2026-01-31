@@ -25,23 +25,51 @@ const SEED_COLLECTIONS = [
   {
     title: '안녕 마음아',
     publisher: '그레이트북스',
-    category: '인성',
+    category: 'EMOTION',
     ages: [3, 4, 5],
     keywords: ['인성동화', '생활습관', '스테디셀러']
   },
   {
     title: '자연이랑',
     publisher: '아람키즈',
-    category: '자연관찰',
+    category: 'NATURE',
     ages: [2, 3, 4, 5],
     keywords: ['자연관찰', '실사', '세이펜']
   },
   {
     title: '도레미 곰',
     publisher: '그레이트북스',
-    category: '창작',
+    category: 'CREATIVE',
     ages: [2, 3, 4],
     keywords: ['음원강자', '세계창작', '노래']
+  },
+  {
+    title: '베베 코알라',
+    publisher: '그레이트북스',
+    category: 'EMOTION',
+    ages: [1, 2, 3],
+    keywords: ['생활동화', '추피', '인성']
+  },
+  {
+    title: '과학공룡',
+    publisher: '그레이트북스',
+    category: 'MATH_SCI',
+    ages: [4, 5, 6],
+    keywords: ['과학', '원리', '실험'] 
+  },
+  {
+      title: '놀라운 자연',
+      publisher: '그레이트북스',
+      category: 'NATURE',
+      ages: [3, 4, 5],
+      keywords: ['자연', '동물']
+  },
+  {
+      title: '베이비올 아기',
+      publisher: '아람',
+      category: 'TOY',
+      ages: [0, 1, 2],
+      keywords: ['초점', '헝겊책', '오감']
   }
 ];
 

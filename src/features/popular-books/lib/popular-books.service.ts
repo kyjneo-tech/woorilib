@@ -82,7 +82,7 @@ class PopularBooksService {
     });
 
     if (error) {
-      console.error('Failed to get peer popular books:', error);
+      console.error('Failed to get peer popular books:', JSON.stringify(error, null, 2));
       // RPC 함수가 없으면 빈 배열 반환 (나중에 설정)
       return [];
     }

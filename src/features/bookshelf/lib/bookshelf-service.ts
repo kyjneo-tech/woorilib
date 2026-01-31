@@ -119,6 +119,32 @@ class BookshelfService {
     }
   }
 
+  /**
+   * Get reading history (from ReadingRecords)
+   */
+  async getReadingHistory(childId?: string): Promise<BookshelfItem[]> {
+    try {
+        const url = childId ? `/api/records?childId=${childId}` : '/api/records';
+        const response = await fetch(url);
+        if (!response.ok) return [];
+        
+        const data = await response.json();
+        return data.records.map((r: any) => ({
+            id: r.id,
+            isbn: r.isbn,
+            title: r.book_title,
+            author: r.book_author,
+            bookImageUrl: r.book_cover,
+            status: 'finished' as BookshelfStatus,
+            addedAt: r.created_at,
+            finishedAt: r.read_date
+        }));
+    } catch (e) {
+        console.error(e);
+        return [];
+    }
+  }
+
   private mapToItem(row: any): BookshelfItem {
     return {
       id: row.id,

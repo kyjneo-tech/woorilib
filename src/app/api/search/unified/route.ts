@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/shared/lib/prisma";
-import { libraryApiClient } from "@/entities/book/api/library-api.client";
+import { aladinApiClient } from "@/entities/book/api/aladin-api.client";
 import { LibraryFilterService } from "@/features/curation/lib/library-filter.service";
 
 export async function GET(request: NextRequest) {
@@ -14,69 +14,69 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // 1. Internal Search (Trusted DB)
-    // We assume anything in 'library_curations' has passed the heuristic filter or is manually verified.
+    // 1. Aladin Search (Rich Data) - Primary Source
+    const aladinBooks = await aladinApiClient.searchBooks(query);
+    
+    // 2. Internal Search (Trusted & Curated Data)
+    // We fetch internal data to "enhance" Aladin results (e.g., add verification badge)
+    // and to catch any locally curated books that might be obscure.
     const internalResults = await prisma.$queryRawUnsafe<any[]>(
       `SELECT isbn13, title, author, publisher, cover_url, age_group, is_purified 
        FROM library_curations 
        WHERE title ILIKE $1 OR author ILIKE $1
-       LIMIT 20`,
+       LIMIT 50`,
       `%${query}%`
     );
 
-    const internalBooks = internalResults.map(b => ({
-      isbn: b.isbn13,
-      title: b.title,
-      author: b.author,
-      publisher: b.publisher,
-      bookImageURL: b.cover_url,
-      source: 'internal',
-      isVerified: b.is_purified,
-      tags: b.is_purified ? ['검증됨'] : ['AI선별']
-    }));
+    // Create a Map for fast lookup of internal data
+    const internalMap = new Map();
+    internalResults.forEach(b => {
+      // Normalize ISBN
+      if (b.isbn13) internalMap.set(b.isbn13, b);
+    });
 
-    let finalBooks = [...internalBooks];
+    // 3. Merge & Create Final List
+    // Strategy: Aladin results are the base. If an internal book matches by ISBN, we merge metadata.
+    // If an internal book is NOT in Aladin, we append it (optional, but good for custom curations).
+    
+    const processedBooks = aladinBooks.map(book => {
+      const internal = internalMap.get(book.isbn);
+      return {
+        ...book,
+        // If we have internal data, use it to flag verification
+        isVerified: internal?.is_purified || false,
+        source: 'aladin',
+        tags: internal?.is_purified ? ['검증됨'] : []
+      };
+    });
 
-    // 2. Fallback to External (if few results)
-    if (finalBooks.length < 5) {
-      console.log(`[UnifiedSearch] Internal results (${finalBooks.length}) are low. Fetching external.`);
-      try {
-        const externalRes = await libraryApiClient.searchBooks({
-          keyword: query,
-          pageSize: 50 // Fetch more to allow for filtering attrition
-        });
+    // Append Internal-only books (that weren't in Aladin results)
+    const aladinIsbns = new Set(aladinBooks.map(b => b.isbn));
+    const uniqueInternalBooks = internalResults
+      .filter(b => b.isbn13 && !aladinIsbns.has(b.isbn13))
+      .map(b => ({
+        isbn: b.isbn13,
+        title: b.title,
+        author: b.author,
+        publisher: b.publisher,
+        bookImageURL: b.cover_url,
+        source: 'internal',
+        isVerified: b.is_purified,
+        tags: b.is_purified ? ['검증됨Local'] : ['AI선별']
+      }));
 
-        const externalDocs = externalRes?.response?.docs || [];
-        
-        const filteredExternal = externalDocs
-          .map((item: any) => ({
-            isbn: item.doc.isbn13 || item.doc.isbn,
-            title: item.doc.bookname,
-            author: item.doc.authors,
-            publisher: item.doc.publisher,
-            publishYear: item.doc.publication_year,
-            bookImageURL: item.doc.bookImageURL,
-            source: 'external'
-          }))
-          .filter((book: any) => {
-            // Deduplicate against internal results
-            if (finalBooks.some(fb => fb.isbn === book.isbn)) return false;
+    const finalBooks = [...processedBooks, ...uniqueInternalBooks];
 
-            // Apply Strict Heuristic Filter
-            const filterRes = LibraryFilterService.filterByAge(book, age);
-            return filterRes.passed;
-          })
-          .slice(0, 20); // Limit external additions
-
-        finalBooks = [...finalBooks, ...filteredExternal];
-      } catch (extErr) {
-        console.error('[UnifiedSearch] External search failed', extErr);
-      }
-    }
+    // Optional: We can still apply a loose age filter if the user selected an age group
+    // But for "Search", users usually expect to find what they typed. 
+    // We will prioritize returning the list but maybe mark "Recommendation" if it fits age.
 
     return NextResponse.json({ books: finalBooks });
-  } catch (error) {
+  } catch (error: any) {
     console.error('[UnifiedSearch] Error:', error);
-    return NextResponse.json({ error: "Search Failed" }, { status: 500 });
+    return NextResponse.json({ 
+      error: "Search Failed", 
+      details: error?.message || String(error) 
+    }, { status: 500 });
   }
 }

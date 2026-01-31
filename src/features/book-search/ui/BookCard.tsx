@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Book } from '@/entities/book/model/types';
 import { bookshelfService } from '@/features/bookshelf/lib/bookshelf-service';
+import { useLibraryAvailability } from '../lib/use-library-availability';
 
 interface BookCardProps {
   book: Book;
@@ -14,6 +15,8 @@ interface BookCardProps {
 export function BookCard({ book, showAcquisition = true, showQuickActions = true }: BookCardProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+
+  const { isAvailable, isLoading, libraryCount, nearestLibrary } = useLibraryAvailability(book.isbn);
 
   const handleAddToBookshelf = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -80,6 +83,13 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
                 {book.ranking}
               </div>
             )}
+            
+            {/* Verification Badge */}
+             {book.isVerified && (
+               <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                 ✓ 검증
+               </div>
+             )}
           </div>
 
           {/* Book Info */}
@@ -103,12 +113,17 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
             {/* Quick Acquisition Indicators */}
             {showAcquisition && (
               <div className="flex flex-wrap gap-1 pt-2">
-                <span 
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                  style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' }}
-                >
-                  🏛️ 주변도서관
-                </span>
+                {isLoading ? (
+                   <span className="text-[10px] text-gray-400 px-2 py-0.5">...</span>
+                ) : isAvailable ? (
+                  <span 
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in"
+                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' }}
+                  >
+                    🏛️ {nearestLibrary ? nearestLibrary.replace(/도서관/g, '') : '도서관'} {libraryCount > 1 && `+${libraryCount-1}`}
+                  </span>
+                ) : null}
+                
                 <span 
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
                   style={{ background: 'rgba(249, 115, 22, 0.1)', color: '#EA580C' }}
@@ -149,4 +164,3 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
     </div>
   );
 }
-

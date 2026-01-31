@@ -9,6 +9,8 @@ import { HeroSection } from './HeroSection';
 import { SpotlightSection } from './SpotlightSection';
 import { LibraryShelf } from './LibraryShelf';
 import { useRegionStore } from '@/features/region-selector/lib/use-region-store';
+import { STAGE_CONFIG } from '@/features/curation/config/standard-roadmaps';
+import Link from 'next/link';
 
 interface Props {
   ageGroup: string | null;
@@ -35,9 +37,11 @@ export function CurationDashboard({ ageGroup }: Props) {
         else if (ageGroup === '7-8') months = 90;
 
         const url = `/api/curation/dashboard?months=${months}${regionCode ? `&region=${regionCode}` : ''}`;
+        console.log(`[Dashboard] Fetching: ${url}`);
         const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to fetch');
         const json = await res.json();
+        console.log('[Dashboard] Received:', json);
         setData(json);
       } catch (err) {
         console.error(err);
@@ -63,26 +67,29 @@ export function CurationDashboard({ ageGroup }: Props) {
 
   if (!data) return <div className="text-center py-10">데이터를 불러올 수 없습니다.</div>;
 
+  const stageConfig = STAGE_CONFIG[data.stage.roadmapStage];
+
   return (
     <div className="flex flex-col gap-8">
       {/* Stage Info Header (Compact Version) */}
-      {/* 
-        1. HEADER: Branding & Age 
-      */}
-      <div className="flex items-center justify-between px-2">
+      <div className="flex items-start justify-between px-2">
         <div>
-            <span className="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                {data.stage.label} ({ageGroup}세)
-            </span>
-            <h2 className="mt-2 text-xl font-bold text-gray-800">
+            <div className={`inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full border text-sm font-bold ${stageConfig.color.replace('bg-', 'bg-opacity-20 ').replace('text-', 'border-opacity-30 border-')}`}>
+                <span>{stageConfig.label}</span>
+                <span className="opacity-50">|</span>
+                <span>{ageGroup}세</span>
+            </div>
+            <h2 className="text-xl font-black text-gray-800 leading-tight">
                 {data.stage.description}
             </h2>
         </div>
+        <Link href="/curation/roadmap" className="shrink-0 flex flex-col items-center bg-gray-900 text-white rounded-xl p-3 shadow-md active:scale-95 transition-transform">
+             <span className="text-lg">📊</span>
+             <span className="text-[9px] font-bold mt-1">로드맵 보기</span>
+        </Link>
       </div>
 
-      {/* 
-        2. HERO: The "One Thing"
-      */}
+      {/* Hero Section */}
       {data.hero && (
         <HeroSection 
             book={data.hero} 
@@ -94,9 +101,7 @@ export function CurationDashboard({ ageGroup }: Props) {
         />
       )}
 
-      {/* 
-        3. SPOTLIGHT: Top 3
-      */}
+      {/* Spotlight Section */}
       {data.spotlight && data.spotlight.length > 0 && (
         <SpotlightSection 
             books={data.spotlight} 
@@ -109,9 +114,7 @@ export function CurationDashboard({ ageGroup }: Props) {
 
       <hr className="border-gray-100" />
 
-      {/* 
-        3.5 LIBRARY: Purified Library Books
-      */}
+      {/* Library Shelf */}
       <LibraryShelf 
         ageGroupId={ageGroup === '0-2' ? 0 : ageGroup === '3-4' ? 3 : ageGroup === '5-6' ? 5 : 7}
         regionCode={regionCode}
@@ -121,9 +124,7 @@ export function CurationDashboard({ ageGroup }: Props) {
         }}
       />
 
-      {/* 
-        4. SHELVES: Categories
-      */}
+      {/* Shelves */}
       <div className="flex flex-col gap-12 pb-12">
         {data.shelves.map(shelf => (
           <ShelfView 
