@@ -61,15 +61,21 @@ export class AladinCollector {
   /**
    * Search for a book or collection to validate existence
    */
-  static async search(query: string, maxResults = 5): Promise<BookSpec[]> {
-    const response = await this.fetch<{ item: any[] }>('ItemSearch.aspx', {
+  static async search(query: string, maxResults = 5, categoryId?: number): Promise<BookSpec[]> {
+    const params: Record<string, string | number> = {
       Query: query,
       QueryType: 'Keyword',
       MaxResults: maxResults,
       SearchTarget: 'Book',
       OptResult: 'description,files', // Request advanced metadata
       Cover: 'Big'
-    });
+    };
+
+    if (categoryId) {
+      params['CategoryId'] = categoryId;
+    }
+
+    const response = await this.fetch<{ item: any[] }>('ItemSearch.aspx', params);
 
     return (response?.item || []).map(this.mapItem);
   }
@@ -120,6 +126,25 @@ export class AladinCollector {
     });
 
     return (response?.item || []).map(this.mapItem);
+  }
+
+  /**
+   * Get Used Price (Min) for a book
+   */
+  static async getUsedPrice(isbn: string): Promise<number | null> {
+    // Aladin Used Store Search
+    const response = await this.fetch<{ item: any[] }>('ItemLookUp.aspx', {
+      ItemId: isbn,
+      ItemIdType: 'ISBN13',
+      OptResult: 'usedList', // Request used book list info
+      Cover: 'Big'
+    });
+
+    const item = response?.item?.[0];
+    if (item && item.subInfo && item.subInfo.usedList && item.subInfo.usedList.aladinUsed) {
+        return item.subInfo.usedList.aladinUsed.minPrice || null;
+    }
+    return null;
   }
 
   private static mapItem(item: any): BookSpec {

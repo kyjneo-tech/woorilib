@@ -52,3 +52,38 @@ export const COLORS = {
   background: '#FFFEF5',   // Cream white
   text: '#3E2723',         // Dark brown
 };
+
+// Curation Taxonomy
+export const DEVELOPMENTAL_AREAS = [
+  '신체운동·건강', // 대근육, 소근육, 신체인식, 건강생활
+  '의사소통',      // 언어이해, 언어표현, 읽기/쓰기 흥미
+  '사회관계',      // 자아존중, 더불어 생활하기, 정서조절
+  '예술경험',      // 아름다움 찾기, 예술적 표현, 감상
+  '자연탐구',      // 탐구과정, 수학적 탐구(수/도형), 과학적 탐구
+  '생활습관',      // 배변, 수면, 식습관, 정리정돈
+  '인지발달',      // 기억력, 문제해결, 사고력 (보조)
+] as const;
+
+export type DevelopmentalArea = typeof DEVELOPMENTAL_AREAS[number];
+
+// Aladin Category Mapping (For Fetcher)
+export const ALADIN_CATEGORIES = {
+  INFANT: 13789,    // 영유아(0~3세)
+  TODDLER: 1108,    // 유아(4~7세)
+  ELEMENTARY: 1120, // 어린이(초등)
+  PARENTING: 1,     // 가정/요리/뷰티 (육아 포함) - Not used for child books
+} as const;
+
+// Sound Pen Compatibility
+export const PEN_TYPES = [
+  '세이펜',       // 시장 점유율 1위 (아람, 그레이트북스 등 다수)
+  '토끼펜',       // 블루래빗 전용
+  '바나나펜',     // 명꼬(한국차일드아카데미) 등
+  '씽킹펜',       // 프뢰벨 전용
+  '피쉬톡',       // 어스본 등 일부 출판사 호환
+  '팝펜',         // 네오랩 (일부 영어 원서)
+  'QR코드',       // 펜은 아니지만 음원 재생 수단
+  'CD/MP3',       // 고전적인 방식
+] as const;
+
+export type PenType = typeof PEN_TYPES[number];

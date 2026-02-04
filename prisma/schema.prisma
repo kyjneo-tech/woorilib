@@ -11,32 +11,39 @@ datasource db {
 }
 
 model UserProfile {
-  id            String         @id @map("id") @db.Uuid
-  email         String         @unique
-  name          String?
-  avatarUrl     String?        @map("avatar_url")
-  createdAt     DateTime       @default(now()) @map("created_at")
+  email                  String         @unique
+  name                   String?
+  avatarUrl              String?        @map("avatar_url")
+  createdAt              DateTime       @default(now()) @map("created_at")
   updatedAt              DateTime       @updatedAt @map("updated_at")
   provider               String?        @default("email")
   userType               String?        @default("general") @map("user_type")
   hasCompletedOnboarding Boolean?       @default(false) @map("has_completed_onboarding")
+  id                     String         @id @map("id")
   childProfiles          ChildProfile[]
+  read_stamps            read_stamps[]
 
   @@map("user_profiles")
   @@schema("public")
 }
 
 model ChildProfile {
-  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String      @map("user_id") @db.Uuid
-  name      String
-  birthYear Int         @map("birth_year")
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  name           String
+  birthYear      Int               @map("birth_year")
   emoji     String?     @default("🐥")
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
   ageGroup  String?     @map("age_group")
+  
+  // --- Personalization Fields ---
+  propensity String?    @map("propensity") // active (활발), calm (차분), sensitive (예민), curious (호기심)
+  interests  String[]   @default([])       // 관심사 태그 (자동차, 공룡, 공주 등)
+  
   user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
   readingRecords reading_records[]
+  read_stamps    read_stamps[]
 
   @@index([userId])
   @@map("child_profiles")
@@ -571,21 +578,20 @@ model curations {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model reading_records {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String    @db.Uuid
-  isbn        String
-  book_title  String
-  book_author String?
-  book_cover  String?
-  reaction    String?
-  note        String?
-  read_date   DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  
-  child_id     String?   @db.Uuid
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String        @db.Uuid
+  child_id     String?
+  isbn         String
+  book_title   String
+  book_author  String?
+  book_cover   String?
+  reaction     String?
+  note         String?
+  read_date    DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  created_at   DateTime?     @default(now()) @db.Timestamptz(6)
   domain       String?
-  childProfile ChildProfile? @relation(fields: [child_id], references: [id], onDelete: SetNull)
-  users        users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  childProfile ChildProfile? @relation(fields: [child_id], references: [id], onUpdate: NoAction)
+  users        users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([child_id], map: "idx_reading_records_child_id")
   @@index([isbn], map: "idx_reading_records_isbn")
@@ -635,15 +641,39 @@ model verified_books {
   publisher           String?
   pub_date            DateTime?                 @db.Date
   cover_url           String?
+  cover_url_naver     String?                   @map("cover_url_naver") // 네이버 비상용 이미지
   description         String?
   price_standard      Int?
+  price_used_min      Int?                      @map("price_used_min") // 알라딘 중고 최저가
   type                String
   collection_id       String?                   @db.Uuid
   target_ages         Int[]
   target_months_range Unsupported("int4range")?
-  tags                String[]
+  tags                String[]                  @default([])
+
+  // --- High-Precision Curation Fields ---
+  target_months_min   Int?                      @map("target_months_min")
+  target_months_max   Int?                      @map("target_months_max")
+  
+  developmental_areas String[]                  @default([]) @map("developmental_areas")
+  sub_competencies    String[]                  @default([]) @map("sub_competencies") // New: 30+ granular skills
+  emotional_keywords  String[]                  @default([]) @map("emotional_keywords")
+  curation_points     String[]                  @default([]) @map("curation_points")
+  compatible_pens     String[]                  @default([]) @map("compatible_pens") // 예: ["세이펜", "QR코드"]
+  
+  // --- Verification Pipeline Fields ---
   source              String?                   @default("aladin")
   is_verified         Boolean?                  @default(false)
+  
+  verification_status String                    @default("pending") @map("verification_status") // pending, verified, rejected, needs_review
+  confidence_score    Int                       @default(0) @map("confidence_score")
+  audit_log           Json?                     @default("[]") @map("audit_log")
+  
+  // --- Personalization Metadata ---
+  energy_level        Int?                      @default(5) @map("energy_level") // 0 (Calm/Bedtime) ~ 10 (Active/Play)
+  volume_number       Int?                      @map("volume_number") // 전집 내 권번 (1권, 2권...)
+  ai_comment          String?                   @map("ai_comment")    // AI 추천 멘트 (ex: "자동차를 좋아하는 3세 아이에게 딱이에요!")
+  
   domain              String?
   created_at          DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?                 @default(now()) @db.Timestamptz(6)
@@ -651,6 +681,86 @@ model verified_books {
 
   @@index([isbn13], map: "idx_verified_books_isbn")
   @@index([tags], map: "idx_verified_books_tags", type: Gin)
+  @@index([verification_status], map: "idx_verified_books_status")
+  @@index([developmental_areas], map: "idx_verified_books_dev_areas", type: Gin)
+  @@schema("public")
+}
+
+model cached_book_covers {
+  isbn       String   @id
+  image_url  String
+  created_at DateTime @default(now())
+  updated_at DateTime
+
+  @@schema("public")
+}
+
+model cached_libraries {
+  lib_code   String   @id
+  lib_name   String
+  address    String?
+  tel        String?
+  homepage   String?
+  latitude   String?
+  longitude  String?
+  updated_at DateTime
+
+  @@schema("public")
+}
+
+model cached_popular_books {
+  id          String   @id
+  category    String
+  region_code String   @default("ALL")
+  book_data   Json
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+
+  @@schema("public")
+}
+
+model read_stamps {
+  id             String        @id
+  user_id        String
+  child_id       String?
+  isbn           String
+  title          String
+  author         String?
+  book_image     String?
+  emoji          String?
+  comment        String?
+  is_public      Boolean       @default(true)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime
+  child_profiles ChildProfile? @relation(fields: [child_id], references: [id])
+  user_profiles  UserProfile   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, isbn, child_id])
+  @@schema("public")
+}
+
+model admin_tasks {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category    String    // 'daily', 'weekly', 'monthly'
+  task_name   String
+  command     String?   // 실행할 터미널 명령어 (Optional)
+  is_completed Boolean  @default(false)
+  completed_at DateTime? @db.Timestamptz(6)
+  reset_cycle String?   // 'daily', 'weekly' (자동 리셋 로직용)
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@schema("public")
+}
+
+model system_backlog {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        String    // 'bug', 'improvement', 'feature'
+  content     String
+  status      String    @default("open") // 'open', 'in_progress', 'done'
+  priority    String    @default("medium") // 'high', 'medium', 'low'
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime  @default(now()) @db.Timestamptz(6)
+
   @@schema("public")
 }
 

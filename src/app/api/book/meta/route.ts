@@ -40,14 +40,14 @@ export async function GET(request: NextRequest) {
 
     // Strat 2: Naver Search (Better for "Sets" or obscure books)
     if (!result) {
-        const naverResults = await NaverCollector.search(query);
+        const naverResults = await NaverCollector.searchBook(query);
         if (naverResults && naverResults.length > 0) {
-            const bestMatch = NaverCollector.normalize(naverResults[0]);
+            const bestMatch = naverResults[0];
             result = {
-                cover: bestMatch.cover,
+                cover: bestMatch.image,
                 link: bestMatch.link,
-                isbn: bestMatch.isbn13,
-                price: bestMatch.priceStandard,
+                isbn: bestMatch.isbn,
+                price: parseInt(bestMatch.discount || '0'),
                 source: 'naver'
             };
         }
@@ -57,14 +57,14 @@ export async function GET(request: NextRequest) {
     if (!result) {
         const simpleQuery = query.split(' ')[0];
         if (simpleQuery && simpleQuery !== query && simpleQuery.length > 2) {
-             const relaxedResults = await NaverCollector.search(simpleQuery);
+             const relaxedResults = await NaverCollector.searchBook(simpleQuery);
              if (relaxedResults && relaxedResults.length > 0) {
-                const bestMatch = NaverCollector.normalize(relaxedResults[0]);
+                const bestMatch = relaxedResults[0];
                 result = {
-                    cover: bestMatch.cover,
+                    cover: bestMatch.image,
                     link: bestMatch.link,
-                    isbn: bestMatch.isbn13,
-                    price: bestMatch.priceStandard,
+                    isbn: bestMatch.isbn,
+                    price: parseInt(bestMatch.discount || '0'),
                     source: 'naver_relaxed'
                 };
              }

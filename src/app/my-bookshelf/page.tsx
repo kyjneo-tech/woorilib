@@ -270,7 +270,7 @@ export default function MyBookshelfPage() {
                       
                       {/* Status Buttons */}
                       <div className="flex gap-1 mt-2">
-                         {activeTab !== 'finished' && STATUS_TABS.slice(1).map((tab) => (
+                         {(activeTab as string) !== 'finished' && STATUS_TABS.slice(1).map((tab) => (
                           <button
                             key={tab.key}
                             onClick={() => handleStatusChange(book.isbn, tab.key as BookshelfStatus)}
@@ -284,7 +284,7 @@ export default function MyBookshelfPage() {
                           </button>
                         ))} 
                         
-                        {activeTab !== 'finished' && (
+                        {(activeTab as string) !== 'finished' && (
                             <button
                             onClick={() => handleRemove(book.isbn)}
                             className="px-2 py-1 rounded text-xs ml-auto"

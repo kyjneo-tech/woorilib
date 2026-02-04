@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
   
       const child = await prisma.childProfile.create({
           data: {
+              id: crypto.randomUUID(), // Explicitly provide ID to satisfy TS
               userId: user.id,
               name,
               birthYear: parseInt(birthYear),
