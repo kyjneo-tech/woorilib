@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { CocoAgentStatus } from '@/features/admin/ui/coco-agent-status';
 
 interface Stats {
   totalBooks: number;
@@ -31,6 +32,9 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold mb-4">대시보드 개요</h2>
+
+      {/* 🤖 Coco Agent Status Section */}
+      <CocoAgentStatus />
 
       {/* Operator Checklist Widget */}
       <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-lg border border-indigo-100 shadow-sm">

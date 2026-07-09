@@ -1,72 +1,75 @@
-
+import { PrismaClient } from '@prisma/client';
+import { AutoTagger } from '../src/features/curation/engine/analyzers/auto-tagger';
+import { DeepAnalyzer } from '../src/features/curation/engine/analyzers/deep-analyzer';
 import dotenv from 'dotenv';
 import path from 'path';
-import { createClient } from '@supabase/supabase-js';
-import { AutoTagger } from '../src/features/curation/engine/analyzers/auto-tagger';
 
-// Load env
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
-}
+// Load Env
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-// Init Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const prisma = new PrismaClient();
 
 async function enrichData() {
-  console.log('✨ Starting Data Enrichment (Standardization)...');
+  console.log('[ENRICH] 🐾 Coco is warming up the analysis factory...');
 
-  // 1. Enrich Collections
-  const { data: collections } = await supabase.from('collections').select('*');
-  if (collections) {
-    console.log(`📚 Processing ${collections.length} Collections...`);
-    
-    for (const item of collections) {
-      const fullText = `${item.title} ${item.publisher} ${item.summary || ''}`;
-      const result = AutoTagger.analyze(fullText);
-      
-      // Update DB
-      const { error } = await supabase.from('collections').update({
-        category: result.primaryCategory,
-        // We could also merge tags into features or a new column, but category is key
-      }).eq('id', item.id);
+  try {
+    // 1. Fetch pending books
+    const books = await prisma.verified_books.findMany({
+      where: { verification_status: 'pending' },
+      take: 100 
+    });
 
-      if (!error) {
-        process.stdout.write('.');
-      } else {
-        console.error(`❌ Failed: ${item.title}`, error.message);
-      }
+    if (books.length === 0) {
+      console.log('[ENRICH] 💤 No pending books. Coco is happy!');
+      return;
     }
-  }
 
-  console.log('\n');
-
-  // 2. Enrich Verified Books
-  const { data: books } = await supabase.from('verified_books').select('*');
-  if (books) {
-    console.log(`📖 Processing ${books.length} Books...`);
+    console.log(`\n[ENRICH] 📖 Munching on ${books.length} books...`);
 
     for (const book of books) {
+      console.log(`[ENRICH] 🔍 Analyzing: "${book.title}"`);
+      
       const fullText = `${book.title} ${book.description || ''}`;
-      const result = AutoTagger.analyze(fullText);
+      const basicResult = AutoTagger.analyze(fullText);
+      
+      let deepResult = await DeepAnalyzer.analyze({
+        title: book.title,
+        author: book.author || '',
+        description: book.description || ''
+      });
 
-      // Merge existing tags with new taxonomy tags
-      const existingTags = book.tags || [];
-      const newTags = [...new Set([...existingTags, ...result.tags, result.primaryCategory])];
-
-      const { error } = await supabase.from('verified_books').update({
-        tags: newTags,
-        // We can also infer age ranges here if we add AgeAnalyzer later
-      }).eq('id', book.id);
-
-       if (!error) {
-        process.stdout.write('+');
+      if (!deepResult) {
+        deepResult = {
+          developmental_areas: basicResult.tags.length > 0 ? [basicResult.primaryCategory] : ['인지'],
+          sub_competencies: ['기본정제'],
+          emotional_keywords: ['일반'],
+          curation_points: ['코코 자동 분석 도서'],
+          energy_level: 5,
+          ai_comment: '코코 에이전트가 기본 규칙으로 분석한 책입니다. 멍! 🐾'
+        };
       }
-    }
-  }
 
-  console.log('\n✅ Enrichment Completed!');
+      await prisma.verified_books.update({
+        where: { id: book.id },
+        data: {
+          developmental_areas: deepResult.developmental_areas,
+          sub_competencies: deepResult.sub_competencies,
+          emotional_keywords: deepResult.emotional_keywords,
+          curation_points: deepResult.curation_points,
+          energy_level: deepResult.energy_level,
+          ai_comment: deepResult.ai_comment,
+          tags: { set: [...new Set([...(book.tags || []), ...basicResult.tags, basicResult.primaryCategory])] },
+          verification_status: 'verified',
+          confidence_score: 70
+        }
+      });
+      process.stdout.write('🐾');
+    }
+
+    console.log('\n\n[ENRICH] ✨ Success! 100 books updated.');
+  } catch (error: any) {
+    console.error('\n[ENRICH] 💥 ERROR:', error.message);
+  }
 }
 
-enrichData();
+enrichData().finally(() => prisma.$disconnect());

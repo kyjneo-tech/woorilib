@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { BookClassifier } from '../../src/features/curation/core/classifiers/book-classifier';
-import { CrossValidator } from '../../src/features/curation/core/validators/cross-validator';
+import { BookEnrichmentService } from '../../src/features/curation/services/book-enrichment.service';
 
 const prisma = new PrismaClient();
 
@@ -14,36 +13,53 @@ async function main() {
   let count = 0;
   for (const book of books) {
     try {
-      // 2. Re-calculate Classification (Fast, no API)
-      const fullText = `${book.title} ${book.description || ''}`;
-      const analysis = BookClassifier.analyze(fullText, book.publisher || '');
+      // 2. Enrich using Centralized Service
+      // Map Prisma model back to BookSpec format for the service
+      const bookSpec = {
+        isbn13: book.isbn13 || '',
+        title: book.title,
+        author: book.author || '',
+        publisher: book.publisher || '',
+        pubDate: book.pub_date?.toISOString() || '',
+        cover: book.cover_url || '',
+        categoryName: book.type || '',
+        description: book.description || '',
+        priceStandard: book.price_standard || 0,
+        link: '',
+        salesPoint: 0,
+        customerReviewRank: 0
+      };
 
-      // 3. Since we want to re-calculate the SCORE too, 
-      // but CrossValidator needs API (Naver), we will use existing score if available,
-      // OR we can do a soft-re-score based on analysis result.
-      // For now, let's keep the confidence_score but adjust status based on NEW thresholds.
-      
-      let newStatus = 'pending';
-      const score = book.confidence_score;
+      const enriched = await BookEnrichmentService.enrich(bookSpec);
 
-      if (score >= 80) newStatus = 'verified';
-      else if (score < 60) newStatus = 'rejected';
-
-      // 4. Update DB
+      // 3. Update DB with enriched data
       await prisma.verified_books.update({
-        where: { isbn13: book.isbn13 },
+        where: { isbn13: book.isbn13 || '' },
         data: {
-          developmental_areas: analysis.areas,
-          sub_competencies: analysis.subCompetencies, // New: 30+ granular skills
-          target_months_min: analysis.age.min,
-          target_months_max: analysis.age.max,
-          energy_level: analysis.energyLevel,
-          ai_comment: analysis.aiComment,
-          tags: Array.from(new Set([...analysis.tags, ...analysis.subCompetencies])), // Sync tags
-          verification_status: newStatus,
+          developmental_areas: enriched.developmental_areas,
+          sub_competencies: enriched.sub_competencies,
+          target_months_min: enriched.target_months_min,
+          target_months_max: enriched.target_months_max,
+          energy_level: enriched.energy_level,
+          ai_comment: enriched.ai_comment,
+          tags: enriched.tags,
+          verification_status: enriched.verification_status,
+          confidence_score: enriched.confidence_score,
           updated_at: new Date()
         }
       });
+
+      count++;
+      if (count % 50 === 0) console.log(`   ✅ Processed ${count}/${books.length}...`);
+      
+    } catch (e) {
+      console.error(`   ❌ Failed to re-audit: ${book.title}`, e);
+    }
+  }
+
+  console.log(`
+🎉 Global Re-Audit Completed! ${count} books updated.`);
+}
 
       count++;
       if (count % 50 === 0) console.log(`   ✅ Processed ${count}/${books.length}...`);

@@ -5,54 +5,67 @@ import { createClient } from '@/shared/lib/supabase/client';
 import { useAuth } from './use-auth';
 
 export interface ChildProfile {
-  id: string;
-  name: string;
-  emoji: string;
-  birthYear: number;
+    id: string;
+    name: string;
+    emoji: string;
+    birthYear: number;
+    propensity?: string;
+    interests?: string[];
 }
 
 export function useFamily() {
-  const { user } = useAuth();
-  const [children, setChildren] = useState<ChildProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+    const { user } = useAuth();
+    const [children, setChildren] = useState<ChildProfile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const supabase = createClient();
 
-  useEffect(() => {
-    async function fetchChildren() {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
-
+    const refresh = async () => {
+        if (!user) return;
+        setLoading(true);
         try {
-            // Need server action or API route usually if using Prisma,
-            // but if Supabase is exposed directly we can use it?
-            // Project seems to use Prisma for heavy lifting.
-            // Let's assume we have an API route or just use simple fetch for now if no direct Db access on client.
-            // Actually, `user_profiles` and `child_profiles` are in public schema, accessible via Supabase client if RLS allows.
-            
-            const { data, error } = await supabase
-                .from('child_profiles')
-                .select('*')
-                .eq('user_id', user.id);
-            
-            if (data) {
-                setChildren(data.map(d => ({
-                    id: d.id,
-                    name: d.name,
-                    emoji: d.emoji || '👶',
-                    birthYear: d.birth_year
-                })));
+            const res = await fetch('/api/family/children');
+            if (res.ok) {
+                const data = await res.json();
+                setChildren(data.children);
             }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
         }
-    }
+    };
 
-    fetchChildren();
-  }, [user]);
+    useEffect(() => {
+        refresh();
+    }, [user]);
 
-  return { children, loading };
+    const addChild = async (name: string, birthYear: string, emoji: string): Promise<ChildProfile | null> => {
+        try {
+            const res = await fetch('/api/family/children', {
+                method: 'POST',
+                body: JSON.stringify({ name, birthYear, emoji })
+            });
+            if (!res.ok) throw new Error('Failed to add child');
+            const newChild = await res.json();
+            await refresh();
+            return newChild;
+        } catch (e) {
+            console.error(e);
+            return null;
+        }
+    };
+
+    const deleteChild = async (id: string) => {
+        try {
+            const res = await fetch(`/api/family/children?id=${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Failed to delete child');
+            await refresh();
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    };
+
+    return { children, loading, refresh, addChild, deleteChild };
 }

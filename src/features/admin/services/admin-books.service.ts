@@ -1,7 +1,6 @@
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/shared/lib/prisma';
 
-const prisma = new PrismaClient();
 
 export interface BookFilter {
   page?: number;

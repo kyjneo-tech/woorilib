@@ -15,9 +15,33 @@ export interface Library {
   operatingTime: string;
 }
 
+export interface LibraryApiResponse<T> {
+  response: {
+    request: any;
+    numFound?: number;
+    resultNum?: number;
+    docs?: { doc: T }[];
+    libs?: { lib: Library }[];
+    error?: string;
+  };
+}
+
+export interface LibraryBook {
+  bookname: string;
+  authors: string;
+  publisher: string;
+  bookImageURL: string;
+  isbn13: string;
+  addition_code?: string;
+  vol?: string;
+  publication_year?: string;
+  class_no?: string;
+  loan_count?: string;
+}
+
 export class LibraryApiClient {
   private baseUrl: string;
-  private cache = new Map<string, { data: any; timestamp: number }>();
+  private cache = new Map<string, { data: unknown; timestamp: number }>();
   private pendingRequests = new Map<string, Promise<any>>();
   private CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -27,8 +51,23 @@ export class LibraryApiClient {
       : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   }
 
-  private async fetch<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
-    const url = new URL(`/api/library/${endpoint}`, this.baseUrl);
+  private async fetch<T>(endpoint: string, params: Record<string, string | number | undefined | null> = {}): Promise<T> {
+    const isServer = typeof window === 'undefined';
+    const serverKey = process.env.LIBRARY_API_KEY;
+
+    // Build URL based on environment
+    let url: URL;
+
+    if (isServer && serverKey) {
+      // Server-side: Call external API directly
+      // This avoids "self-request" loop and port mismatch issues on localhost
+      url = new URL(`${process.env.NEXT_PUBLIC_LIBRARY_API_BASE || 'http://data4library.kr/api'}/${endpoint}`);
+      url.searchParams.set('authKey', serverKey);
+      url.searchParams.set('format', 'json');
+    } else {
+      // Client-side: Call internal Next.js Proxy
+      url = new URL(`/api/library/${endpoint}`, this.baseUrl);
+    }
 
     const sortedParams = Object.entries(params)
       .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
@@ -67,7 +106,7 @@ export class LibraryApiClient {
         while (attempts < MAX_RETRIES) {
           try {
             const response = await fetch(url.toString());
-            
+
             if (response.status === 429) {
               console.warn(`[LibraryApiClient] 429 Rate Limited. Retry ${attempts + 1}/${MAX_RETRIES}`);
               await new Promise(r => setTimeout(r, BASE_DELAY * Math.pow(2, attempts)));
@@ -81,14 +120,17 @@ export class LibraryApiClient {
                 attempts++;
                 continue;
               }
-              throw new Error(`API Error [${response.status}]: ${response.statusText}`);
+              const errorText = await response.text().catch(() => 'No error text');
+              throw new Error(`API Error [${response.status}]: ${response.statusText} - ${url.toString()} - ${errorText}`);
             }
 
             const data = await response.json();
             this.cache.set(cacheKey, { data, timestamp: Date.now() });
             return data;
-          } catch (error: any) {
-            if (attempts < MAX_RETRIES && (error.name === 'TypeError' || error.message.includes('fetch'))) {
+          } catch (error) {
+            console.error(`[LibraryApiClient] Attempt ${attempts + 1} failed:`, error);
+            const err = error as Error;
+            if (attempts < MAX_RETRIES && (err.name === 'TypeError' || err.message.includes('fetch'))) {
               await new Promise(r => setTimeout(r, BASE_DELAY * Math.pow(2, attempts)));
               attempts++;
               continue;
@@ -113,8 +155,8 @@ export class LibraryApiClient {
     pageSize?: number;
     sort?: string;
     region?: string;
-  }) {
-    return this.fetch<any>('srchBooks', {
+  }): Promise<LibraryApiResponse<LibraryBook>> {
+    return this.fetch<LibraryApiResponse<LibraryBook>>('srchBooks', {
       keyword: params.keyword,
       pageNo: params.pageNo || 1,
       pageSize: params.pageSize || 20,
@@ -124,8 +166,8 @@ export class LibraryApiClient {
   }
 
   // Book Detail
-  async getBookDetail(isbn13: string) {
-    return this.fetch<any>('srchDtlList', { isbn13, loaninfoYN: 'Y' });
+  async getBookDetail(isbn13: string): Promise<LibraryApiResponse<LibraryBook>> {
+    return this.fetch<LibraryApiResponse<LibraryBook>>('srchDtlList', { isbn13, loaninfoYN: 'Y' });
   }
 
   // Libraries that have a book
@@ -135,9 +177,9 @@ export class LibraryApiClient {
     dtl_region?: string;
     pageSize?: number;
   }): Promise<{ libraries: Library[]; totalCount: number }> {
-    const response = await this.fetch<any>('libSrchByBook', params);
-    
-    const libs = response.response?.libs?.map((item: any) => ({
+    const response = await this.fetch<LibraryApiResponse<any>>('libSrchByBook', params);
+
+    const libs = response.response?.libs?.map((item) => ({
       libCode: item.lib.libCode,
       libName: item.lib.libName,
       address: item.lib.address,
@@ -165,16 +207,16 @@ export class LibraryApiClient {
     pageSize?: number;
     startDt?: string;
     endDt?: string;
-  }) {
+  }): Promise<LibraryApiResponse<LibraryBook>> {
     // loanItemSrch requires startDt and endDt
     // Default to last 30 days if not provided
     const today = new Date();
     const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    
-    const formatDate = (d: Date) => 
+
+    const formatDate = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-    return this.fetch<any>('loanItemSrch', {
+    return this.fetch<LibraryApiResponse<LibraryBook>>('loanItemSrch', {
       ...params,
       startDt: params.startDt || formatDate(thirtyDaysAgo),
       endDt: params.endDt || formatDate(today),
@@ -184,18 +226,18 @@ export class LibraryApiClient {
 
 
   // Check book availability at a library
-  async checkBookExistence(isbn13: string, libCode: string) {
-    return this.fetch<any>('bookExist', { isbn13, libCode });
+  async checkBookExistence(isbn13: string, libCode: string): Promise<LibraryApiResponse<any>> {
+    return this.fetch<LibraryApiResponse<any>>('bookExist', { isbn13, libCode });
   }
 
   // Hot trending books
-  async getHotTrend(searchDt: string) {
-    return this.fetch<any>('hotTrend', { searchDt });
+  async getHotTrend(searchDt: string): Promise<LibraryApiResponse<LibraryBook>> {
+    return this.fetch<LibraryApiResponse<LibraryBook>>('hotTrend', { searchDt });
   }
 
   // Recommended books
-  async getRecommendList(isbn13: string) {
-    return this.fetch<any>('recommandList', { isbn13, type: 'reader' });
+  async getRecommendList(isbn13: string): Promise<LibraryApiResponse<LibraryBook>> {
+    return this.fetch<LibraryApiResponse<LibraryBook>>('recommandList', { isbn13, type: 'reader' });
   }
 }
 

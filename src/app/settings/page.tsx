@@ -11,14 +11,14 @@ import { RegionSelector } from '@/features/region-selector/ui/region-selector';
 export default function SettingsPage() {
   const router = useRouter();
   const { user, isAuthenticated, signOut } = useAuth();
-  const { 
-    childAgeGroup, 
-    regionCode, 
+  const {
+    childAgeGroup,
+    regionCode,
     regionName,
-    setChildAgeGroup, 
-    setRegion 
+    setChildProfile,
+    setRegion
   } = useUserStore();
-  
+
   const [showAgeModal, setShowAgeModal] = useState(false);
 
   const currentAgeGroup = AGE_GROUPS.find(g => g.id === childAgeGroup);
@@ -45,11 +45,11 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-muted)' }}>
             내 정보
           </h2>
-          
+
           {isAuthenticated ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" 
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
                   style={{ background: 'var(--color-surface-secondary)' }}>
                   👤
                 </div>
@@ -86,7 +86,7 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-muted)' }}>
             자녀 설정
           </h2>
-          
+
           <button
             onClick={() => setShowAgeModal(true)}
             className="w-full flex items-center justify-between py-3 px-4 rounded-xl mb-2"
@@ -98,7 +98,7 @@ export default function SettingsPage() {
               <span>→</span>
             </span>
           </button>
-          
+
           <Link
             href="/settings/family"
             className="w-full flex items-center justify-between py-3 px-4 rounded-xl"
@@ -114,9 +114,9 @@ export default function SettingsPage() {
           <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--color-text-muted)' }}>
             지역 설정
           </h2>
-          
+
           <RegionSelector />
-          
+
           <p className="text-xs mt-3" style={{ color: 'var(--color-text-muted)' }}>
             도서관 검색 및 중고 매물 검색에 사용됩니다. 현재 시/도 단위 뿐 아니라 시/군/구 단위까지 상세 설정이 가능합니다.
           </p>
@@ -145,7 +145,7 @@ export default function SettingsPage() {
       {/* Age Modal */}
       {showAgeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAgeModal(false)}>
-          <div 
+          <div
             className="w-full max-w-sm rounded-3xl p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200"
             style={{ background: 'var(--color-surface)' }}
             onClick={(e) => e.stopPropagation()}
@@ -158,7 +158,7 @@ export default function SettingsPage() {
                 <button
                   key={group.id}
                   onClick={() => {
-                    setChildAgeGroup(group.id);
+                    setChildProfile({ childAgeGroup: group.id });
                     setShowAgeModal(false);
                   }}
                   className="py-4 rounded-xl text-center transition-all"
@@ -177,7 +177,7 @@ export default function SettingsPage() {
       )}
 
       {/* Bottom Navigation */}
-      <nav 
+      <nav
         className="fixed bottom-0 left-0 right-0 px-4 py-3 border-t"
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-surface-secondary)' }}
       >

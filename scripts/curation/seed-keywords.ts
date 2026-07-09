@@ -33,9 +33,11 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 async function main() {
   console.log(`🚀 Starting Auto-Seeder...`);
   
-  // Hardcode the key for safety in this script context if process.env fails
-  // In real app, use dotenv flow.
-  const API_KEY = process.env.ALADIN_TTB_KEY || 'ttbkyjneo0057001';
+  const API_KEY = process.env.ALADIN_TTB_KEY;
+  if (!API_KEY) {
+    console.error('❌ ALADIN_TTB_KEY is missing in environment variables.');
+    return;
+  }
 
   for (const age of AGE_GROUPS) {
     console.log(`

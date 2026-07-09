@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DOMAIN_LABELS } from '@/features/curation/config/standard-roadmaps';
 import { GrowthDomain } from '@/features/classification/lib/classification.service';
+import { Html5Qrcode } from 'html5-qrcode';
 
 export default function BarcodePage() {
     const router = useRouter();
@@ -14,23 +15,43 @@ export default function BarcodePage() {
     const [result, setResult] = useState<any>(null);
     const [listResults, setListResults] = useState<any[]>([]);
     
-    // --- Mock Scanner Logic ---
+    // --- Scanner Logic ---
     const videoRef = useRef<HTMLVideoElement>(null);
     const [cameraActive, setCameraActive] = useState(false);
+    const [hasNativeSupport, setHasNativeSupport] = useState<boolean>(true);
+    const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
-    const startCamera = async () => {
+    // Check capability on mount
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const supported = 'BarcodeDetector' in window;
+            setHasNativeSupport(supported);
+            console.log(`[BarcodePage] Native Support: ${supported}`);
+        }
+    }, []);
+
+    // --- Native Camera Logic (Android/Chrome) ---
+    const startNativeCamera = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: 'environment' } 
+            });
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-                setCameraActive(true);
+                // Wait for video to be ready before setting active
+                videoRef.current.onloadedmetadata = () => {
+                    videoRef.current?.play();
+                    setCameraActive(true);
+                };
             }
         } catch (e) {
-            alert('카메라 접근 권한이 필요합니다.');
+            console.error('Native camera error:', e);
+            // Fallback to library if native getUserMedia fails or is rejected
+            setHasNativeSupport(false);
         }
     };
 
-    const stopCamera = () => {
+    const stopNativeCamera = () => {
         if (videoRef.current?.srcObject) {
             const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
             tracks.forEach(t => t.stop());
@@ -38,11 +59,78 @@ export default function BarcodePage() {
         }
     };
 
+    // --- Library Camera Logic (iOS/Safari) ---
+    const startLibraryCamera = async () => {
+        if (html5QrCodeRef.current) return; // Already running
+
+        try {
+            const qrCode = new Html5Qrcode("reader");
+            html5QrCodeRef.current = qrCode;
+
+            await qrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 0.75
+                },
+                (decodedText) => {
+                    // Success callback
+                    console.log(`[Html5Qrcode] Detected: ${decodedText}`);
+                    // Optional: Validation (ISBN 10/13 length check)
+                    if (decodedText.length === 10 || decodedText.length === 13) {
+                         handleLookupIsbn(decodedText);
+                         // Stop scanning temporarily or permanently?
+                         // Let's stop to prevent duplicate fetches
+                         stopLibraryCamera();
+                    }
+                },
+                (errorMessage) => {
+                    // Ignore frame errors
+                }
+            );
+            setCameraActive(true);
+        } catch (err) {
+            console.error('[Html5Qrcode] Start failed', err);
+            alert('카메라를 실행할 수 없습니다.');
+        }
+    };
+
+    const stopLibraryCamera = async () => {
+        if (html5QrCodeRef.current) {
+            try {
+                if (html5QrCodeRef.current.isScanning) {
+                    await html5QrCodeRef.current.stop();
+                }
+                html5QrCodeRef.current.clear();
+            } catch (e) {
+                console.error('Error stopping html5-qrcode:', e);
+            }
+            html5QrCodeRef.current = null;
+            setCameraActive(false);
+        }
+    };
+
+    // --- Main Control Effect ---
     useEffect(() => {
-        if (mode === 'scan') startCamera();
-        else stopCamera();
-        return () => stopCamera();
-    }, [mode]);
+        if (mode === 'scan') {
+            if (hasNativeSupport) {
+                startNativeCamera();
+            } else {
+                // Give DOM time to render #reader div
+                setTimeout(() => startLibraryCamera(), 100);
+            }
+        } else {
+            stopNativeCamera();
+            stopLibraryCamera();
+        }
+
+        return () => {
+            stopNativeCamera();
+            stopLibraryCamera();
+        };
+    }, [mode, hasNativeSupport]);
+
 
     // --- Search Logic ---
     const handleSearch = async (e?: any) => {
@@ -71,11 +159,16 @@ export default function BarcodePage() {
             if (res.ok && data.book) {
                 setResult(data);
                 setMode('search'); 
-                stopCamera(); // Stop camera once found
+                // Cameras are stopped by useEffect when mode changes
             } else {
-                // If not found in scan mode, we don't alert to avoid interrupting the loop
-                // but for manual simulation we do
                 if (mode === 'search') alert(data.error || '책 정보를 찾을 수 없습니다.');
+                else {
+                    // In scan mode, if failed, maybe restart scanning?
+                    // For library mode, we stopped it. If failed, we should restart.
+                    if (!hasNativeSupport) {
+                        setTimeout(() => startLibraryCamera(), 1000); 
+                    }
+                }
             }
         } catch (e) {
             console.error(e);
@@ -86,6 +179,8 @@ export default function BarcodePage() {
 
     // --- Native Barcode Detection Loop ---
     useEffect(() => {
+        if (!hasNativeSupport) return; // Skip if using library
+
         let animationId: number;
         let isProcessing = false;
 
@@ -97,8 +192,7 @@ export default function BarcodePage() {
 
             const video = videoRef.current;
 
-            // CRITICAL: Check if video is actually ready to be processed
-            // readyState 2+ means HAVE_CURRENT_DATA or more
+            // CRITICAL: Check if video is actually ready
             if (video.readyState < 2 || video.videoWidth === 0 || video.videoHeight === 0) {
                 animationId = requestAnimationFrame(detect);
                 return;
@@ -114,9 +208,10 @@ export default function BarcodePage() {
                     if (barcodes.length > 0) {
                         const isbn = barcodes[0].rawValue;
                         isProcessing = true;
-                        // Vibrate if supported
                         if (navigator.vibrate) navigator.vibrate(200);
                         await handleLookupIsbn(isbn);
+                        // Note: handleLookupIsbn changes mode to 'search' on success, which stops camera.
+                        // If failed, we just continue.
                         isProcessing = false;
                     }
                 } catch (e) {
@@ -128,7 +223,7 @@ export default function BarcodePage() {
 
         if (cameraActive) animationId = requestAnimationFrame(detect);
         return () => cancelAnimationFrame(animationId);
-    }, [cameraActive, mode, result]);
+    }, [cameraActive, mode, result, hasNativeSupport]);
 
     const handleAddToShelf = async (book: any, domain: GrowthDomain) => {
         try {
@@ -182,19 +277,32 @@ export default function BarcodePage() {
                     <div className="w-full max-w-sm flex flex-col gap-6 pt-10">
                         {/* Camera Preview Box */}
                         <div className="relative aspect-[3/4] bg-black rounded-3xl overflow-hidden shadow-2xl border-4 border-indigo-500">
-                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale opacity-60" />
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                            
+                            {/* 1. Native Video Element */}
+                            {hasNativeSupport && (
+                                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-80" />
+                            )}
+
+                            {/* 2. Fallback Library Element (Hidden when not used, but must exist for init) */}
+                            {!hasNativeSupport && (
+                                <div id="reader" className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full" />
+                            )}
+
+                            {/* Overlays */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
                                 <div className="w-64 h-32 border-2 border-dashed border-white/50 rounded-xl relative">
                                      <div className="absolute inset-0 border-2 border-indigo-400 animate-pulse" />
                                 </div>
-                                <p className="text-white text-xs font-bold mt-4 opacity-70">바코드를 사각형 안에 비춰주세요</p>
+                                <p className="text-white text-xs font-bold mt-4 opacity-70 bg-black/30 px-2 rounded">
+                                    {hasNativeSupport ? '초고속 스캔 모드 (Native)' : '호환 스캔 모드 (Library)'}
+                                </p>
                             </div>
                             
-                            {/* Scanning Overlay (Fake) */}
+                            {/* Scanning Animation */}
                             <motion.div 
                                 animate={{ top: ['10%', '90%', '10%'] }}
                                 transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
-                                className="absolute left-0 right-0 h-0.5 bg-indigo-400 shadow-[0_0_15px_rgba(129,140,248,0.8)] z-10"
+                                className="absolute left-0 right-0 h-0.5 bg-indigo-400 shadow-[0_0_15px_rgba(129,140,248,0.8)] z-20"
                             />
                         </div>
 

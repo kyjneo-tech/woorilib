@@ -7,6 +7,8 @@ export const BookSchema = z.object({
   publisher: z.string().optional(),
   publishYear: z.string().optional(),
   bookImageURL: z.string().optional(),
+  cover_url: z.string().optional(), // Added for compatibility
+  cover: z.string().optional(),     // Added for compatibility
   className: z.string().optional(),
   classNo: z.string().optional(),
   vol: z.string().optional(),
@@ -14,6 +16,10 @@ export const BookSchema = z.object({
   ranking: z.number().optional(),
   isVerified: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  summary: z.string().optional(),
+  matchScore: z.number().optional(),
+  aiComment: z.string().optional(),
 });
 
 export type Book = z.infer<typeof BookSchema>;

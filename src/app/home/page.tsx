@@ -10,12 +10,13 @@ import { AGE_GROUPS } from '@/shared/config/constants';
 import { CurationDashboard } from '@/features/curation/ui/CurationDashboard';
 import { RegionSelector } from '@/features/region-selector/ui/region-selector';
 import { BottomNav } from '@/shared/ui/BottomNav';
+import { AiRecommendSection } from '@/features/ai-recommend/ui/AiRecommendSection';
 
 export default function HomePage() {
   const router = useRouter();
   /* State for Age Modal */
   const [showAgeModal, setShowAgeModal] = useState(false);
-  const { childAgeGroup, setChildAgeGroup } = useUserStore();
+  const { childAgeGroup, setChildProfile } = useUserStore();
   const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState(''); // Restore useAuth
 
@@ -42,9 +43,9 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <RegionSelector variant="compact" />
             {currentAgeGroup && (
-              <button 
+              <button
                 onClick={() => setShowAgeModal(true)}
-                className="text-sm px-3 py-1 rounded-full transition-transform active:scale-95" 
+                className="text-sm px-3 py-1 rounded-full transition-transform active:scale-95"
                 style={{ background: 'rgba(46, 125, 50, 0.1)', color: 'var(--color-primary)' }}
               >
                 {currentAgeGroup.label} ✏️
@@ -86,7 +87,7 @@ export default function HomePage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="찾으시는 책 제목이나 작가를 입력하세요"
                 className="w-full px-5 py-4 pr-12 text-lg rounded-2xl border-2 border-transparent focus:border-[var(--color-primary)] focus:outline-none transition-all shadow-sm"
-                style={{ 
+                style={{
                   background: 'white',
                   color: 'var(--color-text)',
                 }}
@@ -94,7 +95,7 @@ export default function HomePage() {
               <button
                 type="submit"
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
-                style={{ 
+                style={{
                   background: searchQuery ? 'var(--color-primary)' : 'var(--color-surface-secondary)',
                   color: searchQuery ? 'white' : 'var(--color-text-muted)',
                 }}
@@ -105,15 +106,18 @@ export default function HomePage() {
           </form>
         </section>
 
+        {/* NEW: AI 맞춤 추천 비서 섹션 */}
+        <AiRecommendSection />
+
         {/* NEW: Curation Dashboard (Exhibition AI) */}
         <CurationDashboard ageGroup={childAgeGroup} />
 
       </main>
-      
+
       {/* Age Modal */}
       {showAgeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAgeModal(false)}>
-          <div 
+          <div
             className="w-full max-w-sm rounded-3xl p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200"
             style={{ background: 'var(--color-surface)' }}
             onClick={(e) => e.stopPropagation()}
@@ -126,7 +130,7 @@ export default function HomePage() {
                 <button
                   key={group.id}
                   onClick={() => {
-                    setChildAgeGroup(group.id);
+                    setChildProfile({ childAgeGroup: group.id });
                     setShowAgeModal(false);
                   }}
                   className="py-4 rounded-xl text-center transition-all"

@@ -10,6 +10,7 @@ import { SimilarBooksSection } from '@/features/recommendation/ui/SimilarBooksSe
 import { bookshelfService, BookshelfItem, BookshelfStatus } from '@/features/bookshelf/lib/bookshelf-service';
 import { ReviewSection } from '@/features/review';
 import { useAuth } from '@/shared/lib/hooks/use-auth';
+import { PageHeader, LoadingSpinner, Button, Card, Typography, Badge } from '@/shared/ui';
 
 interface BookDetailPageProps {
   params: Promise<{ isbn: string }>;
@@ -20,7 +21,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
   const resolvedParams = use(params);
   const isbn = resolvedParams.isbn;
   const { isAuthenticated } = useAuth();
-  
+
   const [book, setBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +33,8 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
       setIsLoading(true);
       try {
         const response = await libraryApiClient.getBookDetail(isbn);
-        const detail = response?.response?.detail?.[0]?.book;
-        
+        const detail = (response as any)?.response?.detail?.[0]?.book;
+
         if (detail) {
           setBook({
             isbn: detail.isbn13 || isbn,
@@ -74,7 +75,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
 
   const handleAddToBookshelf = async (status: BookshelfStatus = 'want_to_read') => {
     if (!book) return;
-    
+
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -90,7 +91,7 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
 
   const handleRemoveFromBookshelf = async () => {
     if (!book) return;
-    
+
     setSavingToBookshelf(true);
     await bookshelfService.removeBook(book.isbn);
     setBookshelfItem(null);
@@ -99,52 +100,33 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
-        <div className="text-center">
-          <div className="animate-spin text-5xl mb-4">📚</div>
-          <p style={{ color: 'var(--color-text-muted)' }}>책 정보 불러오는 중...</p>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <LoadingSpinner size="lg" />
+        <Typography variant="body2" color="muted" className="mt-4">책 정보 불러오는 중...</Typography>
       </div>
     );
   }
 
   if (error || !book) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
-        <div className="text-center">
-          <p className="text-red-500 mb-4">{error || '책을 찾을 수 없습니다.'}</p>
-          <button 
-            onClick={() => router.back()}
-            className="px-4 py-2 rounded-lg"
-            style={{ background: 'var(--color-primary)', color: 'white' }}
-          >
-            뒤로 가기
-          </button>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4 text-center">
+        <Typography color="primary" className="mb-4">{error || '책을 찾을 수 없습니다.'}</Typography>
+        <Button onClick={() => router.back()} variant="primary">
+          뒤로 가기
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pb-8" style={{ background: 'var(--color-background)' }}>
-      {/* Header */}
-      <header className="sticky top-0 z-10 px-4 py-3 flex items-center gap-4" style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}>
-        <button onClick={() => router.back()} className="text-xl">
-          ←
-        </button>
-        <span className="font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-          책 정보
-        </span>
-      </header>
+    <div className="min-h-screen pb-8 bg-background">
+      <PageHeader title="책 상세 정보" />
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         {/* Book Info Section */}
-        <section className="flex gap-4 mb-8">
+        <section className="flex gap-6 mb-8">
           {/* Cover */}
-          <div 
-            className="w-28 h-40 rounded-xl overflow-hidden flex-shrink-0"
-            style={{ background: 'var(--color-surface-secondary)', boxShadow: 'var(--shadow-md)' }}
-          >
+          <div className="w-32 h-44 rounded-2xl overflow-hidden flex-shrink-0 shadow-lg bg-surface-secondary">
             {book.bookImageURL ? (
               <img
                 src={book.bookImageURL}
@@ -159,82 +141,59 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
           </div>
 
           {/* Details */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold mb-2 leading-tight" style={{ color: 'var(--color-text)' }}>
+          <div className="flex-1 min-w-0 pt-2">
+            <Typography variant="h2" className="mb-2 leading-tight">
               {book.title}
-            </h1>
-            
-            {book.author && (
-              <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>
-                {book.author}
-              </p>
-            )}
-            
-            {book.publisher && (
-              <p className="text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>
-                {book.publisher}
-              </p>
-            )}
-            
-            {book.publishYear && (
-              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-                {book.publishYear}년
-              </p>
-            )}
+            </Typography>
+
+            <div className="space-y-1">
+              {book.author && (
+                <Typography variant="body2" color="secondary">
+                  {book.author}
+                </Typography>
+              )}
+
+              {book.publisher && (
+                <Typography variant="body2" color="muted">
+                  {book.publisher} • {book.publishYear}년
+                </Typography>
+              )}
+            </div>
 
             {book.className && (
-              <span 
-                className="inline-block mt-3 text-xs px-2 py-1 rounded-full"
-                style={{ background: 'var(--color-secondary-light)', color: 'var(--color-text-secondary)' }}
-              >
+              <Badge variant="secondary" className="mt-4">
                 {book.className}
-              </span>
+              </Badge>
             )}
           </div>
         </section>
 
         {/* Action Buttons */}
-        <section className="flex gap-2 mb-8">
-          {bookshelfItem ? (
-            <>
-              <button
-                onClick={handleRemoveFromBookshelf}
-                disabled={savingToBookshelf}
-                className="flex-1 py-3 rounded-xl font-semibold"
-                style={{ 
-                  background: 'var(--color-surface)',
-                  color: 'var(--color-primary)',
-                  border: '2px solid var(--color-primary)',
-                }}
-              >
-                {savingToBookshelf ? '...' : `✓ 책장에 있음 (${
-                  bookshelfItem.status === 'want_to_read' ? '읽고싶음' :
-                  bookshelfItem.status === 'reading' ? '읽는중' : '완독'
-                })`}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => handleAddToBookshelf('want_to_read')}
-              disabled={savingToBookshelf}
-              className="flex-1 py-3 rounded-xl font-semibold text-white disabled:opacity-50"
-              style={{ background: 'var(--color-primary)' }}
-            >
-              {savingToBookshelf ? '저장 중...' : '❤️ 책장에 담기'}
-            </button>
-          )}
-          <button
-            className="px-4 py-3 rounded-xl"
-            style={{ background: 'var(--color-surface)', boxShadow: 'var(--shadow-sm)' }}
+        <section className="flex gap-3 mb-8">
+          <Button
+            onClick={bookshelfItem ? handleRemoveFromBookshelf : () => handleAddToBookshelf('want_to_read')}
+            isLoading={savingToBookshelf}
+            variant={bookshelfItem ? 'outline' : 'primary'}
+            fullWidth
+            size="lg"
           >
+            {bookshelfItem ? (
+              `✓ 책장에 있음 (${bookshelfItem.status === 'want_to_read' ? '읽고싶음' :
+                bookshelfItem.status === 'reading' ? '읽는중' : '완독'
+              })`
+            ) : (
+              '❤️ 책장에 담기'
+            )}
+          </Button>
+          <Button variant="ghost" className="bg-surface shadow-sm">
             📤
-          </button>
+          </Button>
         </section>
 
         {/* Acquisition Panel */}
-        <section className="card p-4 mb-6">
+        <Card className="p-4 mb-6">
           <AcquisitionPanel isbn={book.isbn} title={book.title} />
-        </section>
+        </Card>
 
         {/* Quick Read Button */}
         <section className="mb-6">
@@ -250,9 +209,9 @@ export default function BookDetailPage({ params }: BookDetailPageProps) {
         <SimilarBooksSection isbn={book.isbn} className="mb-6" />
 
         {/* Reviews Section */}
-        <section className="card p-4 mb-6">
+        <Card className="p-4 mb-6">
           <ReviewSection isbn={book.isbn} />
-        </section>
+        </Card>
       </main>
     </div>
   );

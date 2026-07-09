@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { SimpleFileCache } from '../../../shared/lib/simple-cache';
+import { BaseApiClient } from '@/shared/api/base-api-client';
 
 // Load environment variables
 if (process.env.NODE_ENV !== 'production') {
@@ -10,7 +11,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
-const NAVER_API_BASE = 'https://openapi.naver.com/v1/search';
+const NAVER_API_BASE = 'https://openapi.naver.com/v1/search/'; // Base URL needs trailing slash for new URL()
 
 if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
   console.warn('⚠️ NAVER API Keys are missing. Naver calls will fail.');
@@ -37,43 +38,42 @@ export interface NaverBlogSpec {
   postdate: string;
 }
 
-export class NaverCollector {
-  private static async fetch<T>(endpoint: string, params: Record<string, string | number>): Promise<T | null> {
-    const url = new URL(`${NAVER_API_BASE}/${endpoint}`);
-    
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.set(key, String(value));
-    });
+interface NaverResponse<T> {
+  items: T[];
+  total?: number;
+}
 
-    // --- Cache Check ---
+export class NaverCollector extends BaseApiClient {
+  protected baseUrl = NAVER_API_BASE;
+  private static instance: NaverCollector;
+
+  constructor() {
+    super();
+  }
+
+  static getInstance(): NaverCollector {
+    if (!this.instance) {
+      this.instance = new NaverCollector();
+    }
+    return this.instance;
+  }
+
+  private async naverRequest<T>(endpoint: string, params: Record<string, string | number>): Promise<T | null> {
     const cacheKey = `naver_${endpoint}_${JSON.stringify(params)}`;
     const cached = SimpleFileCache.get<T>(cacheKey);
-    if (cached) {
-      return cached;
-    }
-    // -------------------
+    if (cached) return cached;
 
     try {
-      const response = await fetch(url.toString(), {
+      const data = await this.request<T>(endpoint, {
+        params,
         headers: {
           'X-Naver-Client-Id': NAVER_CLIENT_ID || '',
           'X-Naver-Client-Secret': NAVER_CLIENT_SECRET || '',
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          console.error('[NaverCollector] Rate Limit Exceeded');
         }
-        throw new Error(`Naver API Error: ${response.status} ${response.statusText}`);
-      }
+      });
       
-      const data = await response.json();
-      
-      // --- Cache Set ---
-      SimpleFileCache.set(cacheKey, data);
-      
-      return data as T;
+      if (data) SimpleFileCache.set(cacheKey, data);
+      return data;
     } catch (error) {
       console.error(`[NaverCollector] Failed to fetch ${endpoint}:`, error);
       return null;
@@ -83,35 +83,47 @@ export class NaverCollector {
   /**
    * Search for books (Review/Cross-Check)
    */
-  static async searchBook(query: string, display = 5): Promise<NaverBookSpec[]> {
-    const response = await this.fetch<{ items: any[] }>('book.json', {
+  async searchBook(query: string, display = 5): Promise<NaverBookSpec[]> {
+    const response = await this.naverRequest<NaverResponse<NaverBookSpec>>('book.json', {
       query: query,
       display: display,
       sort: 'sim' 
     });
-    return (response?.items || []) as NaverBookSpec[];
+    return response?.items || [];
+  }
+
+  static async searchBook(query: string, display = 5): Promise<NaverBookSpec[]> {
+    return this.getInstance().searchBook(query, display);
   }
 
   /**
    * Get Total Count of Blog Reviews
    */
-  static async getBlogReviewCount(query: string): Promise<number> {
-    const response = await this.fetch<{ total: number }>('blog.json', {
+  async getBlogReviewCount(query: string): Promise<number> {
+    const response = await this.naverRequest<NaverResponse<any>>('blog.json', {
       query: query,
       display: 1
     });
     return response?.total || 0;
   }
 
+  static async getBlogReviewCount(query: string): Promise<number> {
+    return this.getInstance().getBlogReviewCount(query);
+  }
+
   /**
    * Search Blogs for sentiment analysis
    */
-  static async searchBlog(query: string, display = 5): Promise<NaverBlogSpec[]> {
-    const response = await this.fetch<{ items: any[] }>('blog.json', {
+  async searchBlog(query: string, display = 5): Promise<NaverBlogSpec[]> {
+    const response = await this.naverRequest<NaverResponse<NaverBlogSpec>>('blog.json', {
       query: query,
       display: display,
       sort: 'sim'
     });
-    return (response?.items || []) as NaverBlogSpec[];
+    return response?.items || [];
+  }
+
+  static async searchBlog(query: string, display = 5): Promise<NaverBlogSpec[]> {
+    return this.getInstance().searchBlog(query, display);
   }
 }

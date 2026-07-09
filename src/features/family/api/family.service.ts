@@ -19,7 +19,7 @@ class FamilyService {
     if (!user) throw new Error('로그인이 필요합니다');
 
     const { data, error } = await supabase
-      .from('children')
+      .from('child_profiles')
       .select('*')
       .eq('user_id', user.id)
       .order('birth_date', { ascending: true });
@@ -38,13 +38,17 @@ class FamilyService {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('로그인이 필요합니다');
 
+    const birthYear = new Date(dto.birthDate).getFullYear();
+
     const { data, error } = await supabase
-      .from('children')
+      .from('child_profiles')
       .insert({
         user_id: user.id,
         name: dto.name,
+        birth_year: birthYear,
         birth_date: dto.birthDate,
         avatar: dto.avatar || DEFAULT_AVATAR,
+        emoji: '👶'
       })
       .select()
       .single();
@@ -61,11 +65,14 @@ class FamilyService {
 
     const updateData: any = {};
     if (dto.name) updateData.name = dto.name;
-    if (dto.birthDate) updateData.birth_date = dto.birthDate;
+    if (dto.birthDate) {
+      updateData.birth_date = dto.birthDate;
+      updateData.birth_year = new Date(dto.birthDate).getFullYear();
+    }
     if (dto.avatar) updateData.avatar = dto.avatar;
 
     const { data, error } = await supabase
-      .from('children')
+      .from('child_profiles')
       .update(updateData)
       .eq('id', id)
       .select()
@@ -82,7 +89,7 @@ class FamilyService {
     const supabase = this.getSupabase();
 
     const { error } = await supabase
-      .from('children')
+      .from('child_profiles')
       .delete()
       .eq('id', id);
 
@@ -98,6 +105,7 @@ class FamilyService {
       userId: data.user_id,
       name: data.name,
       birthDate: data.birth_date,
+      birthYear: data.birth_year, // New
       avatar: data.avatar || DEFAULT_AVATAR,
       createdAt: data.created_at,
       updatedAt: data.updated_at || data.created_at,

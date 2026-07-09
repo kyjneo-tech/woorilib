@@ -16,6 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <NavLink href="/admin/books" icon="📚">Books Management</NavLink>
           <NavLink href="/admin/simulation" icon="🧪">Simulator</NavLink>
           <NavLink href="/admin/operations" icon="🛠️">Operations</NavLink>
+          <NavLink href="/admin/rules" icon="📋">Rules</NavLink>
           <div className="pt-4 border-t mt-4">
             <NavLink href="/" icon="🏠">Back to App</NavLink>
           </div>

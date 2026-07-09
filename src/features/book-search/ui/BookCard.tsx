@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Book } from '@/entities/book/model/types';
 import { bookshelfService } from '@/features/bookshelf/lib/bookshelf-service';
 import { useLibraryAvailability } from '../lib/use-library-availability';
+import { Card, Badge, Typography } from '@/shared/ui';
 
 interface BookCardProps {
   book: Book;
@@ -18,18 +19,23 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
 
   const { isAvailable, isLoading, libraryCount, nearestLibrary } = useLibraryAvailability(book.isbn);
 
-  const handleAddToBookshelf = async (e: React.MouseEvent) => {
+  const handleToggleBookshelf = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (isSaving || isSaved) return;
-    
+
+    if (isSaving) return;
+
     setIsSaving(true);
     try {
-      await bookshelfService.addBook(book, 'want_to_read');
-      setIsSaved(true);
+      if (isSaved) {
+        await bookshelfService.removeBook(book.isbn);
+        setIsSaved(false);
+      } else {
+        await bookshelfService.addBook(book, 'want_to_read');
+        setIsSaved(true);
+      }
     } catch (error) {
-      console.error('Failed to add to bookshelf:', error);
+      console.error('Failed to toggle bookshelf:', error);
     } finally {
       setIsSaving(false);
     }
@@ -38,7 +44,7 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
   const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (navigator.share) {
       try {
         await navigator.share({
@@ -59,12 +65,12 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
   return (
     <div className="relative group">
       <Link href={`/book/${book.isbn}`} className="block">
-        <div className="card p-3 cursor-pointer hover:scale-[1.02] transition-transform h-full">
+        <Card className="p-3 h-full flex flex-col">
           {/* Book Cover */}
-          <div className="relative aspect-[3/4] rounded-lg mb-3 overflow-hidden" style={{ background: 'var(--color-surface-secondary)' }}>
-            {book.bookImageURL ? (
+          <div className="relative aspect-[3/4] rounded-lg mb-3 overflow-hidden bg-surface-secondary">
+            {(book.bookImageURL || book.cover_url || book.cover) ? (
               <img
-                src={book.bookImageURL}
+                src={book.bookImageURL || book.cover_url || book.cover}
                 alt={book.title}
                 className="w-full h-full object-cover"
               />
@@ -73,88 +79,68 @@ export function BookCard({ book, showAcquisition = true, showQuickActions = true
                 <span className="text-4xl opacity-30">📚</span>
               </div>
             )}
-            
+
             {/* Ranking Badge */}
             {book.ranking && book.ranking <= 10 && (
-              <div 
-                className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                style={{ background: 'var(--color-accent)' }}
-              >
+              <div className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white bg-accent shadow-sm">
                 {book.ranking}
               </div>
             )}
-            
+
             {/* Verification Badge */}
-             {book.isVerified && (
-               <div className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                 ✓ 검증
-               </div>
-             )}
+            {book.isVerified && (
+              <div className="absolute top-2 right-2">
+                <Badge variant="primary" size="sm" className="bg-primary text-white shadow-sm border-0">
+                  ✓ 검증
+                </Badge>
+              </div>
+            )}
           </div>
 
           {/* Book Info */}
-          <div className="space-y-1">
-            <h3 
-              className="font-semibold text-sm line-clamp-2 leading-tight"
-              style={{ color: 'var(--color-text)' }}
-            >
+          <div className="flex-1 flex flex-col">
+            <Typography variant="body2" weight="bold" className="line-clamp-2 leading-tight mb-1">
               {book.title}
-            </h3>
-            
+            </Typography>
+
             {book.author && (
-              <p 
-                className="text-xs line-clamp-1"
-                style={{ color: 'var(--color-text-muted)' }}
-              >
+              <Typography variant="caption" color="muted" className="line-clamp-1">
                 {book.author}
-              </p>
+              </Typography>
             )}
 
             {/* Quick Acquisition Indicators */}
             {showAcquisition && (
-              <div className="flex flex-wrap gap-1 pt-2">
+              <div className="flex flex-wrap gap-1 mt-auto pt-2">
                 {isLoading ? (
-                   <span className="text-[10px] text-gray-400 px-2 py-0.5">...</span>
+                  <span className="text-[10px] text-gray-400">...</span>
                 ) : isAvailable ? (
-                  <span 
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in"
-                    style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#2563EB' }}
-                  >
-                    🏛️ {nearestLibrary ? nearestLibrary.replace(/도서관/g, '') : '도서관'} {libraryCount > 1 && `+${libraryCount-1}`}
-                  </span>
+                  <Badge variant="primary" size="sm" className="bg-blue-50 text-blue-600 border-0">
+                    🏛️ {nearestLibrary ? nearestLibrary.replace(/도서관/g, '') : '도서관'} {libraryCount > 1 && `+${libraryCount - 1}`}
+                  </Badge>
                 ) : null}
-                
-                <span 
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                  style={{ background: 'rgba(249, 115, 22, 0.1)', color: '#EA580C' }}
-                >
-                  🥕 당근재고
-                </span>
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </Link>
 
       {/* Quick Action Buttons - Hover overlay */}
       {showQuickActions && (
         <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={handleAddToBookshelf}
-            disabled={isSaving || isSaved}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md transition-transform hover:scale-110"
-            style={{ 
-              background: isSaved ? 'var(--color-primary)' : 'white',
-              color: isSaved ? 'white' : 'var(--color-text)',
-            }}
-            title={isSaved ? '담김' : '책장에 담기'}
+            onClick={handleToggleBookshelf}
+            disabled={isSaving}
+            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md transition-transform hover:scale-110 ${
+              isSaved ? 'bg-primary text-white' : 'bg-white text-text'
+            }`}
+            title={isSaved ? '책장에서 제거' : '책장에 담기'}
           >
             {isSaving ? '...' : isSaved ? '✓' : '❤️'}
           </button>
           <button
             onClick={handleShare}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md transition-transform hover:scale-110"
-            style={{ background: 'white', color: 'var(--color-text)' }}
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm shadow-md transition-transform hover:scale-110 bg-white text-text"
             title="공유하기"
           >
             📤

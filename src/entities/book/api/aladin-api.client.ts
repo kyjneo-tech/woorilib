@@ -56,26 +56,55 @@ export class AladinApiClient {
   }
 
   private async fetchAladin(endpoint: string, params: Record<string, string>): Promise<AladinBook[]> {
-    if (!this.ttbKey) return [];
-    
-    try {
-      const searchParams = new URLSearchParams({
-        ttbkey: this.ttbKey,
-        Output: 'js',
-        Version: '20131101',
-        ...params
-      });
+    const isServer = typeof window === 'undefined';
 
-      const response = await fetch(`${endpoint}?${searchParams.toString()}`);
-      if (!response.ok) {
-        throw new Error(`Aladin API Error: ${response.statusText}`);
+    // Server-side: Direct Call (With Resilience Retry & Backoff)
+    if (isServer) {
+      if (!this.ttbKey) return [];
+      
+      const maxRetries = 3;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          const searchParams = new URLSearchParams({
+            ttbkey: this.ttbKey,
+            Output: 'js',
+            Version: '20131101',
+            ...params
+          });
+          const response = await fetch(`${endpoint}?${searchParams.toString()}`);
+          if (!response.ok) throw new Error(`Aladin API Error: ${response.statusText}`);
+          const data: AladinResponse = await response.json();
+          return data.item || [];
+        } catch (error) {
+          console.warn(`[AladinApiClient] Fetch attempt ${attempt} failed:`, error);
+          if (attempt === maxRetries) {
+            console.error('Aladin API Fetch Error (Max Retries Reached):', error);
+            return [];
+          }
+          // Exponential backoff delay (1s, 2s)
+          const delay = Math.pow(2, attempt - 1) * 1000;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-
-      const data: AladinResponse = await response.json();
-      return data.item || [];
-    } catch (error) {
-      console.error('Aladin API Fetch Error:', error);
       return [];
+    }
+
+    // Client-side: Use Proxy
+    else {
+      try {
+        // Extract endpoint name (e.g., "ItemSearch.aspx")
+        const apiName = endpoint.split('/').pop() || 'ItemSearch.aspx';
+        const searchParams = new URLSearchParams(params);
+
+        const response = await fetch(`/api/aladin/${apiName}?${searchParams.toString()}`);
+        if (!response.ok) throw new Error(`Aladin Proxy Error: ${response.statusText}`);
+
+        const data: AladinResponse = await response.json();
+        return data.item || [];
+      } catch (error) {
+        console.error('Aladin Proxy Fetch Error:', error);
+        return [];
+      }
     }
   }
 

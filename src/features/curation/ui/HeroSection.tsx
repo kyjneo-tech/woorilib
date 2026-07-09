@@ -1,4 +1,4 @@
-import { BookItem } from '../engine/display/shelf-composer';
+import type { BookItem } from '../engine/display/shelf-composer';
 import { useState, useEffect } from 'react';
 
 interface Props {

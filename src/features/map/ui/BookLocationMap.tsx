@@ -18,6 +18,30 @@ interface BookLocationMapProps {
   showFilter?: boolean;
 }
 
+// 필터 버튼 컴포넌트 (외부로 이동)
+const FilterButton = ({ 
+  value, 
+  label, 
+  current, 
+  onClick 
+}: { 
+  value: 'all' | 'library' | 'aladin'; 
+  label: string; 
+  current: string; 
+  onClick: (val: 'all' | 'library' | 'aladin') => void 
+}) => (
+  <button
+    onClick={() => onClick(value)}
+    className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+      current === value
+        ? 'bg-green-600 text-white'
+        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    }`}
+  >
+    {label}
+  </button>
+);
+
 /**
  * 책 구하기 지도 컴포넌트
  * - 도서관 (녹색 마커)
@@ -152,13 +176,6 @@ export function BookLocationMap({
         markerColor = loc.hasStock ? '#8b5cf6' : '#9ca3af'; // 재고있음: 보라, 없음: 회색
       }
 
-      // 마커 이미지
-      const markerSize = new window.kakao.maps.Size(28, 40);
-      const markerImage = new window.kakao.maps.MarkerImage(
-        `https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png`,
-        markerSize
-      );
-
       // SVG 커스텀 마커로 대체
       const markerContent = `
         <div style="cursor: pointer;">
@@ -188,7 +205,6 @@ export function BookLocationMap({
         map: mapRef.current,
         clickable: true,
       });
-      // 기존 onclick 코드 제거
 
       markersRef.current.push(customOverlay);
     });
@@ -211,20 +227,6 @@ export function BookLocationMap({
     }
   }, [selectedLocation]);
 
-  // 필터 버튼
-  const FilterButton = ({ value, label }: { value: 'all' | 'library' | 'aladin'; label: string }) => (
-    <button
-      onClick={() => setFilter(value)}
-      className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-        filter === value
-          ? 'bg-green-600 text-white'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
   return (
     <div className="relative rounded-xl overflow-hidden" style={{ height }}>
       {/* 지도 컨테이너 */}
@@ -233,9 +235,9 @@ export function BookLocationMap({
       {/* 필터 버튼 */}
       {showFilter && (
         <div className="absolute top-3 left-3 z-10 flex gap-2">
-          <FilterButton value="all" label="전체" />
-          <FilterButton value="library" label="🏛️ 도서관" />
-          <FilterButton value="aladin" label="📖 알라딘" />
+          <FilterButton value="all" label="전체" current={filter} onClick={setFilter} />
+          <FilterButton value="library" label="🏛️ 도서관" current={filter} onClick={setFilter} />
+          <FilterButton value="aladin" label="📖 알라딘" current={filter} onClick={setFilter} />
         </div>
       )}
 

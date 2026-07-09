@@ -73,7 +73,7 @@ export class LibraryPurifier {
         author: book.authors,
         publisher: book.publisher,
         age_group: ageGroup,
-        loan_count: parseInt(book.loan_count, 10),
+        loan_count: parseInt(book.loan_count || '0', 10),
         buzz_count: totalBuzz,
         age_density_ratio: densityRatio,
         is_purified: isPurified

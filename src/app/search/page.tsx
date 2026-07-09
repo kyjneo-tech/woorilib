@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useBookSearch } from '@/features/book-search/lib/use-book-search'; // Added Import
 import { libraryApiClient } from '@/entities/book/api/library-api.client';
 import { Book } from '@/entities/book/model/types';
 import { BookCard } from '@/features/book-search/ui/BookCard';
@@ -14,77 +15,69 @@ function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get('q') || '';
-  
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [searchQuery, setSearchQuery] = useState(initialQuery); // Restore this line
+
+  const { searchBooks, loading, error } = useBookSearch(); // Use the hook
+
   const [books, setBooks] = useState<Book[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  // Remove local isLoading state, use hook's loading
   const [hasSearched, setHasSearched] = useState(false);
   const [recommendationTitle, setRecommendationTitle] = useState('');
 
   const performSearch = async (query: string, age?: number) => {
     if (!query.trim()) return;
 
-    setIsLoading(true);
+    // setIsLoading(true); // Handled by hook
     setHasSearched(true);
+    setBooks([]); // Clear previous results
 
     try {
-      const ageParam = age !== undefined ? `&age=${age}` : '';
-      const response = await fetch(`/api/search/unified?q=${encodeURIComponent(query.trim())}${ageParam}`);
-      if (!response.ok) {
-        const errData = await response.json();
-        console.error('Search API Error:', errData);
-        throw new Error(errData.details || errData.error || 'Search failed');
-      }
-      
-      const data = await response.json();
-      setBooks(data.books || []);
+      // Use the hybrid search hook
+      // Note: We ignore 'age' for now as hybrid search focuses on keyword relevance first.
+      // If age filtering is critical, we can add client-side filtering later.
+      const { books: searchResults } = await searchBooks(query, 1);
+      setBooks(searchResults);
+
     } catch (error) {
       console.error('Search error:', error);
       setBooks([]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const handleSearch = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!searchQuery.trim()) return;
-    
+
     // Update URL without reload
     const currentAge = searchParams.get('age');
     const ageParam = currentAge ? `&age=${currentAge}` : '';
     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}${ageParam}`, { scroll: false });
-    
+
     performSearch(searchQuery, currentAge ? parseInt(currentAge) : undefined);
   };
 
   // Auto-search if query param exists on mount
   useEffect(() => {
     const searchType = searchParams.get('type');
-    // Parse age from URL or default to 0 if not present but we want strictness? 
-    // Actually if age is missing, performSearch(q, undefined) -> route uses 0 default.
     const ageStr = searchParams.get('age');
     const ageNum = ageStr ? parseInt(ageStr) : undefined;
     const ageGroup = searchParams.get('age') as AgeGroupId;
 
     if (searchType === 'recommendation' && ageGroup) {
-       // ... existing recommendation logic ...
-       setIsLoading(true);
-       setHasSearched(true);
-       
-       const ageLabel = AGE_GROUPS.find(g => g.id === ageGroup)?.label || '추천';
-       setRecommendationTitle(`${ageLabel} 추천 도서`);
- 
-       recommendationService.getRecommendations({
-         ageGroup,
-         limit: 50,
-       }).then(recs => {
-         setBooks(recs);
-       }).catch(err => {
-         console.error('Failed to fetch recommendations:', err);
-       }).finally(() => {
-         setIsLoading(false);
-       });
+      // ... existing recommendation logic ...
+      setHasSearched(true);
+
+      const ageLabel = AGE_GROUPS.find(g => g.id === ageGroup)?.label || '추천';
+      setRecommendationTitle(`${ageLabel} 추천 도서`);
+
+      recommendationService.getRecommendations({
+        ageGroup,
+        limit: 50,
+      }).then(recs => {
+        setBooks(recs);
+      }).catch(err => {
+        console.error('Failed to fetch recommendations:', err);
+      });
     } else if (initialQuery) {
       performSearch(initialQuery, ageNum);
     }
@@ -109,7 +102,7 @@ function SearchContent() {
               <button
                 type="submit"
                 className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg"
-                style={{ 
+                style={{
                   background: searchQuery ? 'var(--color-primary)' : 'transparent',
                   color: searchQuery ? 'white' : 'var(--color-text-muted)',
                 }}
@@ -123,14 +116,14 @@ function SearchContent() {
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         {/* Loading */}
-        {isLoading && (
+        {(loading) && ( // Use hook 'loading'
           <div className="flex justify-center py-20">
             <div className="animate-spin text-4xl">📚</div>
           </div>
         )}
 
         {/* No Search Yet */}
-        {!hasSearched && !isLoading && (
+        {!hasSearched && !loading && (
           <div className="space-y-8">
             <div className="text-center py-10">
               <span className="text-5xl mb-4 block">🔍</span>
@@ -141,14 +134,14 @@ function SearchContent() {
                 책 제목, 저자명으로 검색해보세요
               </p>
             </div>
-            
+
             {/* Initial Recommendations */}
             <PeerPopularSection />
           </div>
         )}
 
         {/* No Results */}
-        {hasSearched && !isLoading && books.length === 0 && (
+        {hasSearched && !loading && books.length === 0 && (
           <div className="text-center py-20">
             <span className="text-5xl mb-4 block">😢</span>
             <p className="font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
@@ -161,7 +154,7 @@ function SearchContent() {
         )}
 
         {/* Results */}
-        {!isLoading && books.length > 0 && (
+        {!loading && books.length > 0 && (
           <>
             {recommendationTitle ? (
               <div className="mb-6">
@@ -187,7 +180,7 @@ function SearchContent() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav 
+      <nav
         className="fixed bottom-0 left-0 right-0 px-4 py-3 border-t"
         style={{ background: 'var(--color-surface)', borderColor: 'var(--color-surface-secondary)' }}
       >

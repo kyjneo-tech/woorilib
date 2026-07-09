@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { BookItem } from '../engine/display/shelf-composer';
+import type { BookItem } from '../engine/display/shelf-composer';
 import { BookComboCard } from './BookComboCard';
 import { AGE_GROUPS } from '@/shared/config/constants';
 

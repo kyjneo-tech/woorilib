@@ -72,7 +72,7 @@ class RecommendationService {
       const response = await libraryApiClient.getHotTrend(searchDt);
 
       // hotTrend returns: response.results[].result.docs[].doc
-      const results = response?.response?.results || [];
+      const results = (response?.response as any)?.results || [];
       
       // Flatten all docs from all result dates
       const allBooks: RecommendedBook[] = [];

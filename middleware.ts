@@ -2,10 +2,11 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // 관리자 이메일 리스트
-const ADMIN_EMAILS = [
-  'admin@woorilib.com',
-  process.env.ADMIN_EMAIL
-].filter(Boolean); // Remove undefined/null
+// 관리자 이메일 리스트 (환경변수에서 로드)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map(email => email.trim())
+  .filter(Boolean);
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({

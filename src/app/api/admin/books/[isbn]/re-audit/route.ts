@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { BookClassifier } from '../../../../../../features/curation/core/classifiers/book-classifier';
+import { RuleService } from '../../../../../../features/curation/services/rule.service';
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // 2. Re-run Classification Logic
     const fullText = `${book.title} ${book.description || ''}`;
-    const analysis = BookClassifier.analyze(fullText, book.publisher || ''); 
+
+    const rules = await RuleService.getRules();
+    const classifier = new BookClassifier(rules);
+    const analysis = classifier.analyze(fullText, book.publisher || '');
 
     // 3. Update DB
     const updatedBook = await prisma.verified_books.update({
@@ -38,7 +42,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     return NextResponse.json({ success: true, data: updatedBook });
-    
+
   } catch (error) {
     console.error('Re-audit API Error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

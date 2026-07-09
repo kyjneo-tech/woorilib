@@ -1,6 +1,6 @@
 
 import { useRef, useState, useEffect } from 'react';
-import { Shelf, BookItem } from '../engine/display/shelf-composer';
+import type { Shelf, BookItem } from '../engine/display/shelf-composer';
 import { BookComboCard } from './BookComboCard';
 
 interface Props {
