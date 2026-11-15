@@ -1,65 +1,131 @@
-'use client';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { AdSlot } from "@/components/AdSlot";
+import { PostCard } from "@/components/PostCard";
+import { CATEGORY_LIST } from "@/lib/categories";
+import { formatKoreanDate, getAllPosts, getPostsByCategory } from "@/lib/posts";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useUserStore } from '@/entities/user/model/user-store';
-import { OnboardingFunnel } from '@/features/onboarding/ui/OnboardingFunnel';
+export const metadata: Metadata = {
+  title: "우리집 라이브러리 — 연말정산·보험·생활 테크 실용 가이드",
+  alternates: { canonical: "/" },
+};
 
-export default function LandingPage() {
-  const router = useRouter();
-  const { childAgeGroup } = useUserStore();
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (isHydrated && childAgeGroup) {
-      router.replace('/home');
-    }
-  }, [isHydrated, childAgeGroup, router]);
-
-  if (!isHydrated || childAgeGroup) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
-        <div className="animate-spin text-4xl">🌱</div>
-      </div>
-    );
-  }
+export default function HomePage() {
+  const posts = getAllPosts();
+  const [lead, ...rest] = posts;
+  const latest = rest.slice(0, 6);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
-      {/* Hero Section */}
-      <div className="text-center max-w-lg mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 bg-green-100">
-          <span className="text-2xl">🌱</span>
-          <span className="font-semibold text-green-800">우리아이도서관</span>
+    <>
+      <section className="hero">
+        <div className="wrap">
+          <div className="hero__inner">
+            <p className="eyebrow">생활 실용 가이드</p>
+            <h1 className="hero__title">
+              매년 다시 찾아오는 생활 문제,
+              <br />
+              근거부터 정리해 둡니다.
+            </h1>
+            <p className="hero__desc">
+              연말정산 카드 공제, 실손보험 청구, 집안 인터넷 속도처럼 한 번 정리해 두면 오래 쓰는
+              문제를 다룹니다. 기사마다 근거 자료와 계산 과정을 함께 남깁니다.
+            </p>
+            <ul className="hero__points">
+              <li>국세청·금융위 등 공식 자료 확인</li>
+              <li>직접 계산한 예시 포함</li>
+              <li>광고와 본문 구분 표시</li>
+            </ul>
+          </div>
         </div>
+      </section>
 
-        <h1 className="text-3xl md:text-4xl font-bold mb-4 leading-tight text-slate-900">
-          우리 아이 책,<br />
-          <span className="text-green-600">성향에 딱 맞게</span><br />
-          골라드릴게요.
-        </h1>
+      {lead ? (
+        <section className="section">
+          <div className="wrap">
+            <div className="section__head">
+              <h2 className="section__title">대표 글</h2>
+              <Link className="section__more" href={`/category/${lead.category.slug}`}>
+                {lead.category.label} 전체 보기 →
+              </Link>
+            </div>
+            <PostCard post={lead} featured />
+          </div>
+        </section>
+      ) : null}
 
-        <p className="text-lg text-slate-600">
-          나이, 기질, 관심사까지 고려한<br />
-          프리미엄 AI 큐레이션
-        </p>
+      {latest.length > 0 ? (
+        <section className="section" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="section__head">
+              <h2 className="section__title">최신 글</h2>
+              <a className="section__more" href="/feed.xml">
+                RSS로 구독 →
+              </a>
+            </div>
+            <div className="grid grid--3">
+              {latest.map((post) => (
+                <PostCard key={post.slug} post={post} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <div className="wrap">
+        <AdSlot slot="homeBottom" label="광고" />
       </div>
 
-      {/* Onboarding Funnel */}
-      <OnboardingFunnel />
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="wrap">
+          <div className="section__head">
+            <h2 className="section__title">주제별로 찾기</h2>
+            <Link className="section__more" href="/about">
+              편집 원칙 보기 →
+            </Link>
+          </div>
+          <div className="cat-grid">
+            {CATEGORY_LIST.map((category) => {
+              const count = getPostsByCategory(category.slug).length;
+              return (
+                <Link
+                  key={category.slug}
+                  href={`/category/${category.slug}`}
+                  className="cat-card"
+                >
+                  <p className="cat-card__label">{category.label}</p>
+                  <p className="cat-card__desc">{category.description}</p>
+                  <span className="cat-card__count">글 {count}편 →</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
-      {/* Trust Badges */}
-      <div className="flex items-center gap-4 mt-12 text-sm text-slate-400">
-        <span>✓ 전문가 검증</span>
-        <span>✓ 6대 영역 분석</span>
-        <span>✓ 무료</span>
-      </div>
-    </div>
+      {posts.length > 0 ? (
+        <section className="section" style={{ paddingTop: 0 }}>
+          <div className="wrap">
+            <div className="section__head">
+              <h2 className="section__title">전체 글 목록</h2>
+            </div>
+            <ul className="post-list">
+              {posts.map((post) => (
+                <li key={post.slug} className="post-list__item">
+                  <div>
+                    <h3 className="post-list__title">
+                      <Link href={`/posts/${post.slug}`}>{post.title}</Link>
+                    </h3>
+                    <p className="post-list__desc">{post.description}</p>
+                  </div>
+                  <time className="post-list__date" dateTime={post.date}>
+                    {formatKoreanDate(post.date)}
+                  </time>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
+    </>
   );
 }
-

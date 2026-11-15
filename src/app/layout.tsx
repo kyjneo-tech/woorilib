@@ -1,108 +1,135 @@
-import type { Metadata, Viewport } from 'next';
-import './globals.css';
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { JsonLd } from "@/components/JsonLd";
+import { ADSENSE, SITE } from "@/lib/site";
+
+const siteUrl = SITE.url;
 
 export const metadata: Metadata = {
-  title: '우리아이도서관 - 아이 책, 현명하게 골라 합리적으로',
-  description: '0-8세 자녀를 위한 책 추천 및 도서관/중고/새책 획득 가이드. 나이에 맞는 책을 추천받고, 가장 합리적인 방법으로 구해보세요.',
-  keywords: ['아이 책 추천', '유아 도서', '어린이 도서관', '중고책', '그림책 추천', '동화책'],
-  authors: [{ name: '우리아이도서관' }],
-  creator: '우리아이도서관',
-  publisher: '우리아이도서관',
-  
-  // Open Graph (카카오톡, 페이스북 공유)
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${SITE.name} — 연말정산·보험·생활 테크 실용 가이드`,
+    template: `%s | ${SITE.name}`,
+  },
+  description: SITE.description,
+  applicationName: SITE.name,
+  keywords: [
+    "연말정산",
+    "신용카드 소득공제",
+    "체크카드 공제",
+    "실손보험 청구",
+    "병원비 청구",
+    "와이파이 속도",
+    "생활 정보",
+    "우리집 라이브러리",
+  ],
+  authors: [{ name: SITE.publisherName, url: siteUrl }],
+  creator: SITE.publisherName,
+  publisher: SITE.publisherName,
+  category: "생활 정보",
+  alternates: {
+    canonical: "/",
+    types: {
+      "application/rss+xml": [{ url: "/feed.xml", title: `${SITE.name} RSS` }],
+    },
+  },
   openGraph: {
-    type: 'website',
-    locale: 'ko_KR',
-    url: 'https://woorilib.com',
-    siteName: '우리아이도서관',
-    title: '우리아이도서관 - 아이 책, 현명하게 골라 합리적으로',
-    description: '0-8세 자녀를 위한 책 추천 및 도서관/중고/새책 획득 가이드',
+    type: "website",
+    siteName: SITE.name,
+    locale: "ko_KR",
+    url: siteUrl,
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
     images: [
       {
-        url: '/og-image.png',
+        url: SITE.defaultCover,
         width: 1200,
         height: 630,
-        alt: '우리아이도서관',
+        alt: `${SITE.name} 대표 이미지`,
       },
     ],
   },
-  
-  // Twitter Card
   twitter: {
-    card: 'summary_large_image',
-    title: '우리아이도서관',
-    description: '0-8세 자녀를 위한 책 추천 및 획득 가이드',
-    images: ['/og-image.png'],
+    card: "summary_large_image",
+    title: `${SITE.name} — ${SITE.tagline}`,
+    description: SITE.description,
+    images: [SITE.defaultCover],
   },
-  
-  // App 관련
-  applicationName: '우리아이도서관',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: '우리아이도서관',
-  },
-  
-  // 아이콘
-  icons: {
-    icon: [
-      { url: '/icons/icon.svg', type: 'image/svg+xml' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    shortcut: '/icons/icon-96x96.png',
-    apple: [
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-    ],
-  },
-  
-  // 기타
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  icons: {
+    icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    "google-adsense-account": ADSENSE.client,
+    "format-detection": "telephone=no",
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: '#2E7D32',
+  themeColor: "#fbfaf6",
+  colorScheme: "light",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const kakaoMapKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const organization = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE.name,
+    url: siteUrl,
+    logo: { "@type": "ImageObject", url: `${siteUrl}${SITE.logo}` },
+    description: SITE.description,
+  };
+
+  const website = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE.name,
+    url: siteUrl,
+    inLanguage: "ko-KR",
+    description: SITE.description,
+    publisher: { "@type": "Organization", name: SITE.name, url: siteUrl },
+  };
 
   return (
     <html lang="ko">
       <head>
-        {/* Pretendard 폰트 */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
         <link
           rel="stylesheet"
-          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
         />
-        {/* PWA 관련 메타 태그 */}
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="우리아이도서관" />
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        {/* Kakao Map SDK */}
-        {kakaoMapKey && (
-          <script
-            type="text/javascript"
-            src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoMapKey}&libraries=services&autoload=false`}
-            async
-          />
-        )}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap"
+        />
+        {/* Google AdSense — 게시자 ID: pub-4234312634957489 */}
+        <script async src={ADSENSE.scriptSrc} crossOrigin="anonymous" />
       </head>
-      <body className="font-sans antialiased">
-        {children}
+      <body>
+        <a className="skip-link" href="#main">
+          본문으로 바로 가기
+        </a>
+        <SiteHeader />
+        <main id="main">{children}</main>
+        <SiteFooter />
+        <JsonLd data={[organization, website]} />
       </body>
     </html>
   );
