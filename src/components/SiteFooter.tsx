@@ -26,6 +26,9 @@ export function SiteFooter() {
             <p className="site-footer__heading">사이트</p>
             <ul>
               <li>
+                <Link href="/tools">계산기</Link>
+              </li>
+              <li>
                 <Link href="/about">소개</Link>
               </li>
               <li>

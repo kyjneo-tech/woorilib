@@ -14,6 +14,23 @@ type PageProps = {
   params: Promise<{ slug: string }>;
 };
 
+/** 카드 공제 글에서 계산기로 이어 주는 배너 */
+function CalculatorBanner() {
+  return (
+    <div className="calc-banner">
+      <div>
+        <p className="calc-banner__title">내 카드 공제액, 직접 계산해 보세요</p>
+        <p className="calc-banner__desc">
+          총급여와 카드 사용액을 넣으면 2026년 자녀 수별 기본한도와 추가공제까지 반영해 계산합니다.
+        </p>
+      </div>
+      <Link className="calc-banner__cta" href="/tools/card-deduction">
+        계산기 열기 →
+      </Link>
+    </div>
+  );
+}
+
 export const dynamicParams = false;
 
 export function generateStaticParams() {
@@ -149,6 +166,7 @@ export default async function PostPage({ params }: PageProps) {
         <div className="article__layout">
           <div className="article__main">
             <TableOfContents items={toc} />
+            {post.slug === "2026-card-deduction-limit" ? <CalculatorBanner /> : null}
             <AdSlot slot="inArticleTop" label="본문 상단 광고" />
 
             <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
@@ -159,6 +177,14 @@ export default async function PostPage({ params }: PageProps) {
                   <li key={tag}>#{tag}</li>
                 ))}
               </ul>
+            ) : null}
+
+            {post.slug === "2026-card-deduction-limit" ? (
+              <p className="calc-banner__foot">
+                글이 길다면{" "}
+                <Link href="/tools/card-deduction">카드 소득공제 계산기</Link>
+                에서 내 숫자로 바로 확인할 수 있습니다.
+              </p>
             ) : null}
 
             <AdSlot slot="inArticleBottom" label="본문 하단 광고" />

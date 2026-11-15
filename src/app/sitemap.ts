@@ -18,6 +18,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 1,
     },
+    {
+      url: `${SITE.url}/tools/card-deduction`,
+      lastModified: new Date(`${newestUpdate || "2026-11-15"}T09:00:00+09:00`),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${SITE.url}/tools`,
+      lastModified: new Date(`${newestUpdate || "2026-11-15"}T09:00:00+09:00`),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
     ...CATEGORY_LIST.map((category) => ({
       url: `${SITE.url}/category/${category.slug}`,
       lastModified: newestUpdate ? new Date(`${newestUpdate}T09:00:00+09:00`) : new Date(),

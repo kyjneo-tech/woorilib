@@ -43,6 +43,7 @@ export type AdSlotKey = keyof typeof ADSENSE.slots;
 
 export const NAV = [
   { href: "/", label: "홈" },
+  { href: "/tools/card-deduction", label: "계산기" },
   { href: "/category/money", label: "돈·세금" },
   { href: "/category/insurance", label: "보험·의료비" },
   { href: "/category/living", label: "생활·테크" },

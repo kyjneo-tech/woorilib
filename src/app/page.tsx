@@ -39,6 +39,25 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="section" style={{ paddingBottom: 0 }}>
+        <div className="wrap">
+          <div className="tool-teaser">
+            <div>
+              <p className="tool-teaser__label">계산기</p>
+              <h2 className="tool-teaser__title">2026 연말정산 카드 소득공제 계산기</h2>
+              <p className="tool-teaser__desc">
+                총급여 25% 문턱, 2026년에 바뀐 자녀 수별 기본한도, 전통시장·대중교통 추가공제까지
+                계산합니다. 남은 12월에 어느 카드로 얼마를 써야 몇 원을 더 아끼는지도 함께
+                알려 드립니다.
+              </p>
+            </div>
+            <Link className="tool-teaser__cta" href="/tools/card-deduction">
+              내 공제액 계산하기 →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {lead ? (
         <section className="section">
           <div className="wrap">

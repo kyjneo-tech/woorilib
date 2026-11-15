@@ -72,6 +72,12 @@ export const metadata: Metadata = {
     icon: [{ url: "/icon.png", sizes: "512x512", type: "image/png" }],
     apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
+  // 검색엔진 소유확인 — 네이버 서치어드바이저(kyjneo 계정, 2026-11-15 등록)
+  verification: {
+    other: {
+      "naver-site-verification": "5ce48cd096f29c25b5803937bfaf3d0ed6fa5473",
+    },
+  },
   other: {
     "google-adsense-account": ADSENSE.client,
     "format-detection": "telephone=no",
