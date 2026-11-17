@@ -161,6 +161,27 @@ def main():
         badge="병원 서류 없이 앱으로",
     )
     cover(
+        f"{OUT_POSTS}/cash-receipt-deduction-calculator-2026.png",
+        "돈·세금",
+        ["현금영수증", "소득공제 한도"],
+        ["총급여 25% 문턱부터 한도까지", "30%는 환급이 아닙니다"],
+        badge="자녀 2명 400만 · 1명 350만원",
+    )
+    cover(
+        f"{OUT_POSTS}/incheon-eum-card-deduction-2026.png",
+        "돈·세금",
+        ["인천e음", "이음카드 소득공제"],
+        ["체크카드처럼 30%", "전통시장 40% · 신청이 먼저"],
+        badge="앱에서 소득공제 신청 필수",
+    )
+    cover(
+        f"{OUT_POSTS}/samsung-fire-silson-claim-docs-2026.png",
+        "보험·의료비",
+        ["삼성화재 실손보험", "청구 서류"],
+        ["통원 · 입원 · 약제비별", "반려되는 누락 포인트까지"],
+        badge="100만원 초과는 우편 접수만",
+    )
+    cover(
         f"{OUT_POSTS}/wifi-slow-check.png",
         "생활·테크",
         ["집 와이파이가", "느려졌을 때"],
