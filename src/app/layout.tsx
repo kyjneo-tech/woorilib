@@ -3,7 +3,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { JsonLd } from "@/components/JsonLd";
-import { ADSENSE, SITE } from "@/lib/site";
+import { ADSENSE, SITE, adsenseScriptEnabled } from "@/lib/site";
 
 const siteUrl = SITE.url;
 
@@ -125,8 +125,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&display=swap"
         />
-        {/* Google AdSense — 게시자 ID: pub-4234312634957489 */}
-        <script async src={ADSENSE.scriptSrc} crossOrigin="anonymous" />
+        {/* Google AdSense — 게시자 ID: pub-4234312634957489
+            로컬(127.0.0.1·localhost)과 Vercel Preview 에서는 넣지 않는다 */}
+        {adsenseScriptEnabled() ? (
+          <script async src={ADSENSE.scriptSrc} crossOrigin="anonymous" />
+        ) : null}
       </head>
       <body>
         <a className="skip-link" href="#main">

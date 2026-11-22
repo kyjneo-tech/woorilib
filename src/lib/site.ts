@@ -41,6 +41,22 @@ export const ADSENSE = {
 
 export type AdSlotKey = keyof typeof ADSENSE.slots;
 
+/**
+ * 애드센스 스크립트를 실제 HTML에 넣을지 결정한다.
+ *
+ * - 로컬 개발(127.0.0.1·localhost)과 Vercel Preview 배포에서는 스크립트를 넣지 않는다.
+ *   그대로 두면 애드센스 보고서에 127.0.0.1·preview 페이지뷰가 섞여 실제 수익이 흐려진다.
+ * - 운영(Vercel production)에서는 자동으로 켜진다.
+ * - 다른 호스팅으로 옮겼을 때는 NEXT_PUBLIC_ADSENSE_ENABLED=1 로 직접 켜고,
+ *   0 으로 두면 강제로 끌 수 있다.
+ */
+export function adsenseScriptEnabled(): boolean {
+  const flag = process.env.NEXT_PUBLIC_ADSENSE_ENABLED;
+  if (flag === "1") return true;
+  if (flag === "0") return false;
+  return process.env.VERCEL_ENV === "production";
+}
+
 export const NAV = [
   { href: "/", label: "홈" },
   { href: "/tools/card-deduction", label: "계산기" },
