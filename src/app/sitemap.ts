@@ -25,6 +25,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: `${SITE.url}/tools/donation-deduction`,
+      lastModified: new Date("2026-11-23T09:00:00+09:00"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
       url: `${SITE.url}/tools`,
       lastModified: new Date(`${newestUpdate || "2026-11-15"}T09:00:00+09:00`),
       changeFrequency: "monthly",
